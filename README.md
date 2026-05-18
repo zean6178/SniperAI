@@ -59,12 +59,12 @@ npm start               # Live trading
 |-------|----------|--------|
 | Bot Engine (core logic) | Week 0 | ✅ Done |
 | Architecture + API Design | Week 0 | ✅ Done |
-| Backend API Layer | Week 1-2 | 🔜 Next |
-| Mobile App (React Native) | Week 3-4 | Planned |
-| Seed Vault Integration | Week 5 | Planned |
-| Push Notifications | Week 6 | Planned |
-| AI Chat Engine | Week 7 | Planned |
-| SKR Token + dApp Store | Week 8-9 | Planned |
+| Backend API Layer | Week 1-2 | ✅ Done |
+| Mobile App (React Native) | Week 3-4 | ✅ Done |
+| Seed Vault Integration | Week 5 | ✅ Done |
+| Push Notifications | Week 6 | ✅ Done |
+| AI Chat Engine | Week 7 | ✅ Done |
+| SKR Token + dApp Store | Week 8-9 | ✅ Done |
 
 ## Tech Stack
 
