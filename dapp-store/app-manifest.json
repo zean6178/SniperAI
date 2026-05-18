@@ -1,0 +1,26 @@
+{
+  "schema_version": "v0.2.0",
+  "name": "SniperAI",
+  "short_description": "AI-powered memecoin trading copilot for Solana Mobile",
+  "long_description": "SniperAI scores every new Pump.fun token in real-time (0-100), detects rugs and bundles, and lets you buy/sell with 1-tap Seed Vault signing. Features AI chat, push alerts, portfolio tracking, and auto TP/SL.",
+  "category": "defi",
+  "android_package": "com.sniperai.app",
+  "urls": {
+    "website": "https://sniperai.app",
+    "github": "https://github.com/zean6178/SniperAI",
+    "privacy_policy": "https://sniperai.app/privacy",
+    "terms_of_service": "https://sniperai.app/terms"
+  },
+  "publisher_details": {
+    "name": "SniperAI Team",
+    "website": "https://sniperai.app",
+    "contact": "contact@sniperai.app"
+  },
+  "tags": ["trading", "defi", "ai", "memecoin", "solana", "pump-fun"],
+  "permissions": ["INTERNET", "PUSH_NOTIFICATIONS", "WALLET_ADAPTER"],
+  "skr_integration": {
+    "enabled": true,
+    "earn_actions": ["daily_login", "trade_completed", "profitable_trade", "referral"],
+    "spend_actions": ["premium_unlock", "fee_discount"]
+  }
+}
