@@ -10,6 +10,7 @@
 import { authGuard } from '../middleware/auth.js';
 import { prepareBuyTransaction, prepareSellTransaction, submitTransaction } from '../../services/trade-service.js';
 import { preTradeRiskCheck, calculateBuyAmount } from '../../../../risk.js';
+// Path: backend/src/api/routes/ → ../../../../ = SniperAI root ✓
 
 export default async function tradeRoutes(fastify) {
 

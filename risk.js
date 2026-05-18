@@ -66,7 +66,8 @@ export async function preTradeRiskCheck() {
       reasons.push(`❌ Insufficient balance: ${solBalance.toFixed(4)} SOL < ${minRequired.toFixed(4)} (buy + gas)`);
     }
   } catch (e) {
-    reasons.push(`⚠️ Balance check failed: ${e.message}`);
+    canTrade = false;
+    reasons.push(`❌ Balance check failed: ${e.message}`);
   }
 
   // 5. Cooldown after loss

@@ -8,7 +8,7 @@
 
 import { Connection, VersionedTransaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import axios from 'axios';
-import { savePosition, updatePosition, closePosition, recordBuy } from '../../../../state.js';
+import { savePosition, updatePosition, closePosition, recordBuy } from '../../../state.js';
 
 const RPC_URL = process.env.RPC_URL || 'https://api.mainnet-beta.solana.com';
 

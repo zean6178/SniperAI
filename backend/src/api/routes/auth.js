@@ -2,7 +2,7 @@
  * Auth Routes — Wallet-based authentication
  */
 
-import { generateToken, verifyWalletSignature } from '../middleware/auth.js';
+import { generateToken, verifyWalletSignature, authGuard } from '../middleware/auth.js';
 
 export default async function authRoutes(fastify) {
 
@@ -71,7 +71,7 @@ export default async function authRoutes(fastify) {
    * Get current authenticated wallet
    */
   fastify.get('/me', {
-    preHandler: [(await import('../middleware/auth.js')).authGuard],
+    preHandler: [authGuard],
   }, async (request) => {
     return { wallet: request.wallet };
   });
