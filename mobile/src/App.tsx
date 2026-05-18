@@ -14,6 +14,7 @@ import { WalletProvider } from './providers/WalletProvider';
 import HomeScreen from './screens/HomeScreen';
 import TokenDetailScreen from './screens/TokenDetailScreen';
 import PortfolioScreen from './screens/PortfolioScreen';
+import AIChatScreen from './screens/AIChatScreen';
 import SettingsScreen from './screens/SettingsScreen';
 
 const Tab = createBottomTabNavigator();
@@ -39,6 +40,11 @@ function HomeTabs() {
         name="Portfolio"
         component={PortfolioScreen}
         options={{ title: '📊 Portfolio' }}
+      />
+      <Tab.Screen
+        name="AI"
+        component={AIChatScreen}
+        options={{ title: '🤖 AI Chat' }}
       />
       <Tab.Screen
         name="Settings"
