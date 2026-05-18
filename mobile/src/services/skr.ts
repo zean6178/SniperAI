@@ -15,13 +15,13 @@ export const SKR_DECIMALS = 9;
 
 // ─── Reward Rates ─────────────────────────────────────────────────────────────
 export const REWARD_RATES = {
-  dailyLogin: 5,
-  tradeCompleted: 2,
-  profitableTrade: 10,
-  referral: 50,
-  streak3Day: 15,
-  streak7Day: 50,
-  streak30Day: 200,
+  dailyLogin: 1,
+  tradeCompleted: 1,
+  profitableTrade: 5,
+  referral: 25,
+  streak3Day: 7.5,
+  streak7Day: 25,
+  streak30Day: 100,
 };
 
 // ─── Premium Tiers ────────────────────────────────────────────────────────────
