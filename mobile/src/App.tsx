@@ -1,5 +1,7 @@
 /**
  * SniperAI — Mobile App Entry Point
+ * 
+ * Wrapped with WalletProvider for Seed Vault / MWA integration.
  */
 
 import React from 'react';
@@ -7,8 +9,8 @@ import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text } from 'react-native';
 
+import { WalletProvider } from './providers/WalletProvider';
 import HomeScreen from './screens/HomeScreen';
 import TokenDetailScreen from './screens/TokenDetailScreen';
 import PortfolioScreen from './screens/PortfolioScreen';
@@ -49,25 +51,27 @@ function HomeTabs() {
 
 export default function App() {
   return (
-    <NavigationContainer>
-      <StatusBar style="light" />
-      <Stack.Navigator
-        screenOptions={{
-          headerStyle: { backgroundColor: '#0D0D0D' },
-          headerTintColor: '#fff',
-        }}
-      >
-        <Stack.Screen
-          name="Main"
-          component={HomeTabs}
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="TokenDetail"
-          component={TokenDetailScreen}
-          options={{ title: 'Token Detail' }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <WalletProvider>
+      <NavigationContainer>
+        <StatusBar style="light" />
+        <Stack.Navigator
+          screenOptions={{
+            headerStyle: { backgroundColor: '#0D0D0D' },
+            headerTintColor: '#fff',
+          }}
+        >
+          <Stack.Screen
+            name="Main"
+            component={HomeTabs}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="TokenDetail"
+            component={TokenDetailScreen}
+            options={{ title: 'Token Detail' }}
+          />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </WalletProvider>
   );
 }
