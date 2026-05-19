@@ -43,7 +43,7 @@ const config = {
   // ─── Treasury / Revenue Wallet ──────────────────────────────────────────────
   // Semua revenue (swap fee, subscription) dikirim ke wallet ini
   treasury: {
-    walletAddress:  process.env.TREASURY_WALLET || '',  // Solana wallet address (public key)
+    walletAddress:  process.env.TREASURY_WALLET || '4tifC6mukaYFh333k3pFn3U4wNkTCWUFEUSYkURMZJtZ',
     swapFeePct:     0.5,     // 0.5% fee dari setiap trade user
     feeDistribution: {
       profit:       50,      // 50% → ke treasury (operating costs + profit)
