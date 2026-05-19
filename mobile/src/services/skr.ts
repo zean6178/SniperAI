@@ -18,7 +18,7 @@ export const REWARD_RATES = {
   dailyLogin: 1,
   tradeCompleted: 1,
   profitableTrade: 5,
-  referral: 25,
+  referral: 10,
   streak3Day: 7.5,
   streak7Day: 25,
   streak30Day: 100,
