@@ -188,7 +188,7 @@ Infra:    Railway/Render + Cloudflare
 
 ## Links
 
-- **Bot Engine (Open Source)**: https://github.com/zean6178/Carter
+- **Full Project (Open Source)**: https://github.com/zean6178/SniperAI
 - **Architecture Doc**: See ARCHITECTURE.md
 - **API Design**: See API.md
 
