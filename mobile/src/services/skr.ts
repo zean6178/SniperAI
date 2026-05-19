@@ -25,29 +25,71 @@ export const REWARD_RATES = {
 };
 
 // ─── Premium Tiers ────────────────────────────────────────────────────────────
+
+// Genesis Token holders get 50% discount on all subscription tiers
+export const GENESIS_DISCOUNT_PCT = 50;
+
 export const PREMIUM_TIERS = [
   {
     id: 'pro_weekly',
     name: 'Pro (Weekly)',
+    priceUsd: 2.50,
+    genesisPriceUsd: 1.25,   // 50% off for Genesis Token holders
     skrCost: 100,
+    genesisSkrCost: 50,      // 50% off SKR cost too
     features: ['AI Chat unlimited', 'Score >60 alerts', '5 max positions'],
     duration: '7d',
   },
   {
     id: 'pro_monthly',
     name: 'Pro (Monthly)',
+    priceUsd: 9.99,
+    genesisPriceUsd: 4.99,   // 50% off
     skrCost: 350,
+    genesisSkrCost: 175,
     features: ['AI Chat unlimited', 'Score >50 alerts', '10 max positions', 'Copy trading'],
     duration: '30d',
   },
   {
     id: 'elite',
     name: 'Elite (Monthly)',
+    priceUsd: 29.99,
+    genesisPriceUsd: 14.99,  // 50% off
     skrCost: 1000,
+    genesisSkrCost: 500,
     features: ['Everything in Pro', 'Priority alerts (<1s)', 'Custom screening', 'API access'],
     duration: '30d',
   },
 ];
+
+/**
+ * Get price for a tier based on Genesis Token ownership
+ */
+export function getTierPrice(tierId: string, hasGenesisToken: boolean) {
+  const tier = PREMIUM_TIERS.find(t => t.id === tierId);
+  if (!tier) return null;
+  return {
+    priceUsd: hasGenesisToken ? tier.genesisPriceUsd : tier.priceUsd,
+    skrCost: hasGenesisToken ? tier.genesisSkrCost : tier.skrCost,
+    isDiscounted: hasGenesisToken,
+    discountPct: hasGenesisToken ? GENESIS_DISCOUNT_PCT : 0,
+    tier,
+  };
+}
+
+/**
+ * Check if wallet holds Seeker Genesis Token (on-chain verification)
+ * Genesis Token is a non-transferable NFT minted to each Seeker device.
+ * Re-verified every billing cycle — if NFT sold/transferred, discount lost.
+ */
+export async function checkGenesisToken(wallet: string): Promise<boolean> {
+  try {
+    const res = await api.get(`/skr/check-genesis?wallet=${wallet}`);
+    return res.hasGenesisToken === true;
+  } catch {
+    return false;
+  }
+}
 
 // ─── Balance ──────────────────────────────────────────────────────────────────
 export async function getSKRBalance(wallet: string) {
