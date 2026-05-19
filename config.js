@@ -1,38 +1,29 @@
 /**
- * config.js
- * Konfigurasi utama bot sniper pump.fun
- * Semua parameter tuning ada di sini.
+ * config.js — Bot Configuration
+ * 
+ * Extended dengan hybrid merger config untuk multiple source.
  */
 
-import dotenv from 'dotenv';
-dotenv.config();
-
-// ─── Validate critical env vars ─────────────────────────────────────────────
-if (!process.env.WALLET_PRIVATE_KEY) {
-  console.error('❌ WALLET_PRIVATE_KEY is not set in .env — bot cannot start.');
-  console.error('   Copy .env.example → .env and fill in your wallet key.');
-  process.exit(1);
-}
-
-if (!process.env.RPC_URL) {
-  console.warn('⚠️  RPC_URL not set — using default public Solana RPC (slow, rate-limited).');
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// CONFIGURATION
-// ═══════════════════════════════════════════════════════════════════════════════
-
 const config = {
-
   // ─── Wallet & RPC ─────────────────────────────────────────────────────────
   walletPrivateKey: process.env.WALLET_PRIVATE_KEY,
   rpcUrl:           process.env.RPC_URL || 'https://api.mainnet-beta.solana.com',
-  rpcWssUrl:        process.env.RPC_WSS_URL || 'wss://api.mainnet-beta.solana.com',
   heliusApiKey:     process.env.HELIUS_API_KEY || '',
+
+  // ─── Treasury / Revenue Wallet ──────────────────────────────────────────────
+  treasury: {
+    walletAddress:  process.env.TREASURY_WALLET || '4tifC6mukaYFh333k3pFn3U4wNkTCWUFEUSYkURMZJtZ',
+    swapFeePct:     0.5,
+    feeDistribution: {
+      profit:       50,
+      rewardPool:   30,
+      development:  20,
+    },
+  },
 
   // ─── Mode ─────────────────────────────────────────────────────────────────
   isDryRun:  process.env.DRY_RUN === 'true',
-  botMode:   process.env.BOT_MODE || 'semi-auto', // 'full-auto' | 'semi-auto'
+  botMode:   process.env.BOT_MODE || 'semi-auto',
 
   // ─── Telegram ─────────────────────────────────────────────────────────────
   telegram: {
@@ -40,142 +31,125 @@ const config = {
     chatId:   process.env.TELEGRAM_CHAT_ID || '',
   },
 
-  // ─── Treasury / Revenue Wallet ──────────────────────────────────────────────
-  // Semua revenue (swap fee, subscription) dikirim ke wallet ini
-  treasury: {
-    walletAddress:  process.env.TREASURY_WALLET || '4tifC6mukaYFh333k3pFn3U4wNkTCWUFEUSYkURMZJtZ',
-    swapFeePct:     0.5,     // 0.5% fee dari setiap trade user
-    feeDistribution: {
-      profit:       50,      // 50% → ke treasury (operating costs + profit)
-      rewardPool:   30,      // 30% → reward pool (SKR rewards untuk users)
-      development:  20,      // 20% → development fund (growth, marketing)
-    },
-  },
-
-  // ─── Jito MEV Protection ──────────────────────────────────────────────────
-  jito: {
-    enabled:     process.env.USE_JITO === 'true',
-    tipLamports: parseInt(process.env.JITO_TIP_LAMPORTS || '10000'),
-    endpoint:    'https://mainnet.block-engine.jito.wtf/api/v1/bundles',
-  },
-
   // ═══════════════════════════════════════════════════════════════════════════
-  // SCREENING FILTERS — Token harus pass SEMUA filter ini untuk di-snipe
+  // SCREENING FILTERS
   // ═══════════════════════════════════════════════════════════════════════════
   screening: {
-
-    // ── Bonding Curve ──────────────────────────────────────────────────────
-    minBondingCurvePct:  5,     // Minimum progress bonding curve (%)
-    maxBondingCurvePct:  40,    // Maximum (jangan masuk terlalu late)
-
-    // ── Holder Analysis ────────────────────────────────────────────────────
-    minHolders:          15,    // Minimum unique holders
-    maxTopHolderPct:     15,    // Max % supply oleh 1 wallet (exclude dev)
-    maxTop10HolderPct:   40,    // Max % supply oleh top 10 holders
-
-    // ── Dev Wallet ─────────────────────────────────────────────────────────
-    maxDevHoldingPct:    5,     // Max % dev masih pegang
-    blockBundledLaunch:  true,  // Skip jika terdeteksi bundled launch
-    maxBundleWallets:    3,     // Jika >3 wallet beli di block yang sama = bundled
-
-    // ── Volume & Liquidity ─────────────────────────────────────────────────
-    minLiquiditySol:     5,     // Minimum SOL in bonding curve
-    minBuyCount5m:       10,    // Minimum jumlah buy dalam 5 menit terakhir
-    minVolume5mSol:      3,     // Minimum volume 5 menit (SOL)
-
-    // ── Social / Meta ──────────────────────────────────────────────────────
-    requireSocial:       false, // Wajib punya Twitter/Telegram?
-    trendingNarratives:  [],    // Filter by narrative (kosong = semua)
-
-    // ── Age & Timing ───────────────────────────────────────────────────────
-    maxTokenAgeMinutes:  30,    // Skip token yang terlalu lama (>30 min)
-    minTokenAgeSeconds:  10,    // Skip token yang terlalu baru (<10 detik, biasanya bot)
-
-    // ── Blacklist ──────────────────────────────────────────────────────────
+    minBondingCurvePct:  1,
+    maxBondingCurvePct:  25,
+    minHolders:          5,
+    maxTopHolderPct:     25,
+    maxTop10HolderPct:   60,
+    maxDevHoldingPct:    10,
+    blockBundledLaunch:  true,
+    maxBundleWallets:    5,
+    minLiquiditySol:     0.5,
+    minBuyCount5m:       3,
+    minVolume5mSol:      0.2,
+    requireSocial:       false,
+    maxTokenAgeMinutes:  15,
+    minTokenAgeSeconds:  0,
+    snipeThreshold:      60,
+    watchThreshold:      40,
+    bundleDetection: {
+      enabled:                  true,
+      fundingClusterThreshold:  3,
+      scorePenaltyPerCluster:   20,
+      skipOnConfirmedBundle:    true,
+      maxFundingClusters:       2,
+    },
     useDeployerBlacklist: true,
     useTokenBlacklist:    true,
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // ENTRY STRATEGY — Kapan dan berapa beli
+  // ENTRY STRATEGY
   // ═══════════════════════════════════════════════════════════════════════════
   entry: {
-    buyAmountSol:        0.5,   // Jumlah SOL per snipe
-    maxBuyAmountSol:     2.0,   // Maximum SOL per snipe (untuk scaling)
-    slippageBps:         1500,  // Slippage tolerance (15%)
-    priorityFeeLamports: 50000, // Priority fee untuk speed
-
-    // ── Scaling (opsional) ─────────────────────────────────────────────────
-    enableScaling:       false, // Scale buy amount berdasarkan confidence
+    buyAmountSol:        0.05,
+    maxBuyAmountSol:     0.10,
+    slippageBps:         2000,
+    priorityFeeLamports: 50000,
+    enableScaling:       true,
     scalingTiers: [
-      { minScore: 90, multiplier: 2.0 },  // Confidence 90+ → 2x buy
-      { minScore: 75, multiplier: 1.5 },  // Confidence 75+ → 1.5x buy
-      { minScore: 60, multiplier: 1.0 },  // Confidence 60+ → 1x buy (default)
+      { minScore: 90, multiplier: 1.5 },
+      { minScore: 75, multiplier: 1.0 },
+      { minScore: 60, multiplier: 0.5 },
     ],
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // EXIT STRATEGY — Kapan dan bagaimana jual
+  // EXIT STRATEGY
   // ═══════════════════════════════════════════════════════════════════════════
   exit: {
-    // ── Take Profit (bertahap) ─────────────────────────────────────────────
     takeProfitLevels: [
-      { triggerMultiple: 2.0, sellPct: 50 },   // Jual 50% di 2x
-      { triggerMultiple: 3.0, sellPct: 30 },   // Jual 30% di 3x
-      { triggerMultiple: 5.0, sellPct: 15 },   // Jual 15% di 5x
-      // Sisa 5% = moonbag (hold forever)
+      { triggerMultiple: 2.0, sellPct: 60 },
+      { triggerMultiple: 4.0, sellPct: 30 },
+      { triggerMultiple: 8.0, sellPct: 10 },
     ],
-
-    // ── Stop Loss ──────────────────────────────────────────────────────────
-    stopLossPct:          -40,   // Cut loss di -40%
-    trailingStopPct:      25,    // Trailing stop: jual jika turun 25% dari peak
-
-    // ── Time-based Exit ────────────────────────────────────────────────────
-    maxHoldTimeMinutes:   60,    // Auto-sell setelah 60 menit (jika belum TP/SL)
-    stalePriceMinutes:    10,    // Jika harga tidak bergerak 10 menit → exit
-
-    // ── Rug Detection ──────────────────────────────────────────────────────
-    autoExitOnRug:        true,  // Auto-sell jika detect rug indicators
+    stopLossPct:          -30,
+    trailingStopPct:      25,
+    maxHoldTimeMinutes:   60,
+    stalePriceMinutes:    10,
+    autoExitOnRug:        true,
     rugDetection: {
-      devSellThreshold:     50,  // Dev jual >50% holdings → rug
-      liquidityDropPct:     60,  // Liquidity turun >60% dalam 1 menit → rug
-      priceDropPct:         70,  // Harga drop >70% dalam 30 detik → rug
+      devSellThreshold:     50,
+      liquidityDropPct:     60,
+      priceDropPct:         70,
     },
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // RISK MANAGEMENT — Portfolio-level protection
+  // RISK MANAGEMENT
   // ═══════════════════════════════════════════════════════════════════════════
   risk: {
-    maxOpenPositions:     3,     // Maksimal 3 posisi terbuka bersamaan
-    maxDailyLossSol:      5,     // Stop trading jika rugi >5 SOL hari ini
-    maxDailyTrades:       15,    // Maks 15 trade per hari (avoid overtrade)
-    gasReserveSol:        0.1,   // Selalu sisakan 0.1 SOL untuk gas
-    cooldownAfterLossSec: 120,   // Cooldown 2 menit setelah loss
-
-    // ── Portfolio Sizing ───────────────────────────────────────────────────
-    maxPortfolioExposure: 0.3,   // Max 30% portfolio di memecoins
-    maxSingleExposure:    0.1,   // Max 10% portfolio per trade
+    maxOpenPositions:     2,
+    maxDailyLossSol:      0.1,
+    maxDailyTrades:       8,
+    gasReserveSol:        0.02,
+    cooldownAfterLossSec: 180,
+    zeroBalanceCooldownSec: 715300,
+    maxPortfolioExposure: 0.3,
+    maxSingleExposure:    0.1,
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // MONITORING — Price tracking intervals
+  // HYBRID MODE — Multi-source signal merger
   // ═══════════════════════════════════════════════════════════════════════════
-  monitoring: {
-    priceCheckIntervalMs: 3000,  // Check harga setiap 3 detik
-    holderCheckIntervalMs: 30000, // Check holder setiap 30 detik
-    cleanupIntervalMs:    60000, // Cleanup expired positions setiap 1 menit
-  },
+  hybrid: {
+    enabled: true,             // Enable hybrid merger (3 source)
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // COPY TRADING — Follow smart wallets (opsional)
-  // ═══════════════════════════════════════════════════════════════════════════
-  copyTrading: {
-    enabled:        false,
-    wallets:        [],           // Array of wallet addresses to copy
-    minWalletWinRate: 60,        // Only copy wallets with >60% win rate
-    maxCopyDelaySec:  10,        // Max delay sebelum copy (jika >10s, skip)
-    copyAmountPct:    50,        // Copy 50% dari buy amount mereka
+    // ── Source Weights ────────────────────────────────────────────────────
+    wsWeight:       0.30,      // PumpPortal WS (30%)
+    serverWeight:   0.50,      // Signal Server api.thecharon.xyz (50%)
+    trendingWeight: 0.20,      // Jupiter Trending (20%)
+
+    // ── Signal Server (api.thecharon.xyz) ─────────────────────────────────
+    signalServerUrl:  process.env.SIGNAL_SERVER_URL || '',
+    signalServerKey:  process.env.SIGNAL_SERVER_KEY || '',
+    signalPollMs:     Number(process.env.SIGNAL_POLL_MS || 30_000),
+
+    // ── Jupiter Trending ──────────────────────────────────────────────────
+    trendingEnabled:   true,
+    trendingSource:    'jupiter',
+    trendingInterval:  '5m',
+    trendingLimit:     100,
+    trendingPollMs:    Number(process.env.TRENDING_POLL_MS || 60_000),
+
+    // ── Strategy Multipliers ──────────────────────────────────────────────
+    strategyAmounts: {
+      fast_snipe:       0.6,   // 60% dari buyAmountSol
+      swing:            1.2,   // 120%
+      high_confidence:  2.0,   // 200%
+      low_confidence:   0.0,   // Skip
+    },
+    strategySlippage: {
+      fast_snipe:       1.2,   // Lebih longgar
+      swing:            1.0,   // Default
+      high_confidence:  0.8,   // Lebih ketat
+    },
+
+    dedupWindowMs:    60_000,
   },
 };
 
