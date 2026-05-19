@@ -13,6 +13,9 @@ import { api } from './api';
 export const SKR_MINT = 'SKRTokenMintAddressPlaceholder1111111111111';
 export const SKR_DECIMALS = 9;
 
+// Seeker Genesis Token (SGT) — for discount verification
+export const SGT_COLLECTION_ADDRESS = 'Fyr1vDSkABCMRmDAnDK2bsNiCwKWV3ts4FczVEnG6zxA';
+
 // ─── Reward Rates ─────────────────────────────────────────────────────────────
 export const REWARD_RATES = {
   dailyLogin: 1,
@@ -79,8 +82,15 @@ export function getTierPrice(tierId: string, hasGenesisToken: boolean) {
 
 /**
  * Check if wallet holds Seeker Genesis Token (on-chain verification)
- * Genesis Token is a non-transferable NFT minted to each Seeker device.
- * Re-verified every billing cycle — if NFT sold/transferred, discount lost.
+ * 
+ * SGT Collection: Fyr1vDSkABCMRmDAnDK2bsNiCwKWV3ts4FczVEnG6zxA
+ * 
+ * Verification method:
+ * 1. Query wallet's NFTs via Helius DAS API (getAssetsByOwner)
+ * 2. Check if any NFT belongs to SGT collection
+ * 3. Re-verified every billing cycle — if NFT transferred, discount lost
+ * 
+ * Example verified holder: wfrE17YFQAMHSTWwUGUSj9pUYi3fQmiULvwj57Wkzng
  */
 export async function checkGenesisToken(wallet: string): Promise<boolean> {
   try {
