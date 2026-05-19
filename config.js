@@ -40,6 +40,18 @@ const config = {
     chatId:   process.env.TELEGRAM_CHAT_ID || '',
   },
 
+  // ─── Treasury / Revenue Wallet ──────────────────────────────────────────────
+  // Semua revenue (swap fee, subscription) dikirim ke wallet ini
+  treasury: {
+    walletAddress:  process.env.TREASURY_WALLET || '',  // Solana wallet address (public key)
+    swapFeePct:     0.5,     // 0.5% fee dari setiap trade user
+    feeDistribution: {
+      profit:       50,      // 50% → ke treasury (operating costs + profit)
+      rewardPool:   30,      // 30% → reward pool (SKR rewards untuk users)
+      development:  20,      // 20% → development fund (growth, marketing)
+    },
+  },
+
   // ─── Jito MEV Protection ──────────────────────────────────────────────────
   jito: {
     enabled:     process.env.USE_JITO === 'true',
