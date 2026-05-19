@@ -151,6 +151,15 @@ const config = {
 
     dedupWindowMs:    60_000,
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // MONITORING — Price tracking intervals
+  // ═══════════════════════════════════════════════════════════════════════════
+  monitoring: {
+    priceCheckIntervalMs: Number(process.env.PRICE_CHECK_INTERVAL_MS || 15_000),
+    holderCheckIntervalMs: 30000,
+    cleanupIntervalMs:    60000,
+  },
 };
 
 export default config;

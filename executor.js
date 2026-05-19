@@ -120,7 +120,7 @@ async function buyViaPumpPortal(mint, amountSol, slippageBps) {
     // Send transaction
     const connection = getConnection();
     const txHash = await connection.sendRawTransaction(tx.serialize(), {
-      skipPreflight: true,
+      skipPreflight: true, // PumpPortal txs need skipPreflight for speed
       maxRetries: 3,
     });
 
@@ -178,7 +178,7 @@ async function buyViaJupiter(mint, amountSol, slippageBps) {
 
     const connection = getConnection();
     const txHash = await connection.sendRawTransaction(tx.serialize(), {
-      skipPreflight: true,
+      skipPreflight: false, // Jupiter txs — use preflight for safety
       maxRetries: 3,
     });
 
@@ -269,7 +269,7 @@ async function sellViaPumpPortal(mint, tokenAmount, slippageBps) {
 
     const connection = getConnection();
     const txHash = await connection.sendRawTransaction(tx.serialize(), {
-      skipPreflight: true,
+      skipPreflight: true, // PumpPortal sell — need speed
       maxRetries: 3,
     });
 
@@ -318,7 +318,7 @@ async function sellViaJupiter(mint, tokenAmount, slippageBps) {
 
     const connection = getConnection();
     const txHash = await connection.sendRawTransaction(tx.serialize(), {
-      skipPreflight: true,
+      skipPreflight: false, // Jupiter sell — use preflight
       maxRetries: 3,
     });
 

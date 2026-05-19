@@ -75,14 +75,22 @@ async function evaluatePosition(mint, position) {
   // 1. Get current price
   const currentPriceSol = await getTokenPrice(mint);
   if (currentPriceSol === null) {
-    // Price unavailable — check if stale too long
+    // Price unavailable — could be pre-migration token (not on Jupiter yet)
+    // DON'T emergency sell just because price is unavailable!
+    // Only trigger stale exit if we previously HAD a price and now lost it.
+    const hadPriceBefore = position.currentPriceSol && position.currentPriceSol > 0;
     const lastPriceCheck = position.lastPriceCheck || position.openedAt;
     const staleDurationMs = Date.now() - new Date(lastPriceCheck).getTime();
     const staleThresholdMs = config.exit.stalePriceMinutes * 60 * 1000;
 
-    if (staleDurationMs > staleThresholdMs) {
-      console.log(chalk.yellow(`[monitor] ⚠️ ${position.symbol} price stale for ${(staleDurationMs / 60000).toFixed(0)}min — emergency sell`));
-      await executeSell(mint, position, 100, '⚠️ STALE PRICE: no price data, emergency exit');
+    if (hadPriceBefore && staleDurationMs > staleThresholdMs) {
+      // Token previously had price but now lost it — likely rug/delist
+      console.log(chalk.yellow(`[monitor] ⚠️ ${position.symbol} price lost for ${(staleDurationMs / 60000).toFixed(0)}min (had price before) — emergency sell`));
+      await executeSell(mint, position, 100, '⚠️ STALE PRICE: previously priced token lost price data');
+    } else if (!hadPriceBefore) {
+      // Token never had a Jupiter price — it's pre-migration, this is NORMAL
+      // Skip — don't sell just because Jupiter can't quote a Pump.fun bonding curve token
+      console.log(chalk.gray(`[monitor] ℹ️ ${position.symbol} no Jupiter price (pre-migration) — skipping`));
     }
     return;
   }

@@ -86,7 +86,30 @@ async function main() {
   // Start position monitor
   startMonitor();
 
-  // Start token detector & set callback
+  // Wire up hybrid merger → main pipeline
+  if (config.hybrid?.enabled) {
+    const { setOnDecision } = await import('./merger.js');
+    setOnDecision(async (mergerResult) => {
+      // Convert merger output to tokenData format for handleNewToken
+      const tokenData = {
+        mint: mergerResult.mint,
+        symbol: mergerResult.symbol,
+        name: mergerResult.name,
+        deployer: mergerResult.deployer,
+        marketCapSol: mergerResult.marketCapSol,
+        initialBuySol: mergerResult.initialBuySol,
+        timestamp: mergerResult.timestamp,
+        // Pre-scored by merger
+        _mergerScore: mergerResult.score,
+        _mergerStrategy: mergerResult.strategy,
+        _mergerSources: mergerResult.sources,
+      };
+      await handleNewToken(tokenData);
+    });
+    console.log(chalk.green('[main] ✅ Hybrid merger → pipeline connected'));
+  }
+
+  // Start token detector & set callback (for non-hybrid / fallback mode)
   setOnNewToken(handleNewToken);
   startDetector();
 
