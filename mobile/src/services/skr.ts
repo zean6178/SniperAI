@@ -14,7 +14,10 @@ export const SKR_MINT = 'SKRTokenMintAddressPlaceholder1111111111111';
 export const SKR_DECIMALS = 9;
 
 // Seeker Genesis Token (SGT) — for discount verification
-export const SGT_COLLECTION_ADDRESS = 'Fyr1vDSkABCMRmDAnDK2bsNiCwKWV3ts4FczVEnG6zxA';
+// Group/Collection: GT22s89nU4iWFkNXj1Bw6uYhJJWDRPpShHt4Bk8f99Te
+// Authority:        GT2zuHVaZQYZSyQMgJPLzvkmyztfyXg2NJunqFp4p3A4 (Solana Mobile)
+export const SGT_GROUP_ADDRESS = 'GT22s89nU4iWFkNXj1Bw6uYhJJWDRPpShHt4Bk8f99Te';
+export const SGT_AUTHORITY = 'GT2zuHVaZQYZSyQMgJPLzvkmyztfyXg2NJunqFp4p3A4';
 
 // ─── Reward Rates ─────────────────────────────────────────────────────────────
 export const REWARD_RATES = {

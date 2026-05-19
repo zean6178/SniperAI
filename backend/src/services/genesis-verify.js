@@ -3,18 +3,24 @@
  * 
  * Verifies if a wallet holds a Seeker Genesis Token (SGT) NFT.
  * 
- * SGT Collection Address: Fyr1vDSkABCMRmDAnDK2bsNiCwKWV3ts4FczVEnG6zxA
+ * SGT uses Token-2022 extensions with groupMemberPointer:
+ * - Group (Collection): GT22s89nU4iWFkNXj1Bw6uYhJJWDRPpShHt4Bk8f99Te
+ * - Authority:          GT2zuHVaZQYZSyQMgJPLzvkmyztfyXg2NJunqFp4p3A4 (Solana Mobile)
+ * - permanentDelegate = non-transferable (controlled by authority)
+ * 
+ * Each Seeker device mints 1 unique SGT. Example:
+ * - Mint: Fyr1vDSkABCMRmDAnDK2bsNiCwKWV3ts4FczVEnG6zxA (member #66490)
+ * - Holder: wfrE17YFQAMHSTWwUGUSj9pUYi3fQmiULvwj57Wkzng
  * 
  * Verification methods:
- * 1. Helius DAS API (getAssetsByOwner) — recommended, fastest
+ * 1. Helius DAS API (getAssetsByOwner) — filter by group
  * 2. Solana RPC (getTokenAccountsByOwner) — fallback
- * 
- * Example verified holder: wfrE17YFQAMHSTWwUGUSj9pUYi3fQmiULvwj57Wkzng
  */
 
 import axios from 'axios';
 
-const SGT_COLLECTION_ADDRESS = 'Fyr1vDSkABCMRmDAnDK2bsNiCwKWV3ts4FczVEnG6zxA';
+const SGT_GROUP_ADDRESS = 'GT22s89nU4iWFkNXj1Bw6uYhJJWDRPpShHt4Bk8f99Te';
+const SGT_AUTHORITY = 'GT2zuHVaZQYZSyQMgJPLzvkmyztfyXg2NJunqFp4p3A4';
 const HELIUS_API_KEY = process.env.HELIUS_API_KEY || '';
 
 // Cache results for 1 hour (avoid spamming RPC)
@@ -84,23 +90,23 @@ async function verifyViaHelius(walletAddress) {
 
     const assets = res.data?.result?.items || [];
 
-    // Find any NFT that belongs to SGT collection
+    // Find any NFT that belongs to SGT group/collection
     const sgt = assets.find(asset => {
-      // Check collection grouping
+      // Check collection/group grouping
       const collection = asset.grouping?.find(g =>
         g.group_key === 'collection' &&
-        g.group_value === SGT_COLLECTION_ADDRESS
+        g.group_value === SGT_GROUP_ADDRESS
       );
       if (collection) return true;
 
-      // Also check creators (backup — SGT might use verified creator)
+      // Check creators/authority (SGT authority = Solana Mobile)
       const creator = asset.creators?.find(c =>
-        c.address === SGT_COLLECTION_ADDRESS && c.verified === true
+        c.address === SGT_AUTHORITY && c.verified === true
       );
       if (creator) return true;
 
-      // Check authority
-      if (asset.authorities?.some(a => a.address === SGT_COLLECTION_ADDRESS)) return true;
+      // Check authority directly
+      if (asset.authorities?.some(a => a.address === SGT_AUTHORITY)) return true;
 
       return false;
     });
@@ -168,8 +174,8 @@ export function clearGenesisCache(walletAddress) {
 }
 
 /**
- * Get SGT collection address
+ * Get SGT group/collection address
  */
 export function getSGTCollectionAddress() {
-  return SGT_COLLECTION_ADDRESS;
+  return SGT_GROUP_ADDRESS;
 }
