@@ -31,12 +31,39 @@ const FEE_CONFIG = {
   },
 };
 
-// ─── Subscription Prices (SOL) ────────────────────────────────────────────────
-const SUBSCRIPTION_PRICES = {
-  pro_weekly:  0.05,        // ~$9.99 equivalent per week
-  pro_monthly: 0.15,        // ~$9.99/mo at ~$150/SOL
-  elite:       0.45,        // ~$29.99/mo at ~$150/SOL
+// ─── Subscription Prices (Fixed USD, converted to SOL at runtime) ─────────────
+// Harga tetap dalam USD — SOL amount dihitung dinamis berdasarkan harga SOL saat itu
+const SUBSCRIPTION_PRICES_USD = {
+  pro_weekly:  2.50,        // $2.50/week (~$9.99/month)
+  pro_monthly: 9.99,        // $9.99/month
+  elite:       29.99,       // $29.99/month
 };
+
+// Fallback SOL price jika API gagal (update manually jika perlu)
+let cachedSolPriceUsd = 150;
+
+/**
+ * Get current SOL price in USD (from Jupiter/CoinGecko)
+ */
+async function fetchSolPrice() {
+  try {
+    const { default: axios } = await import('axios');
+    const res = await axios.get('https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112', { timeout: 5000 });
+    const price = parseFloat(res.data?.data?.['So11111111111111111111111111111111111111112']?.price || 0);
+    if (price > 0) cachedSolPriceUsd = price;
+  } catch {}
+  return cachedSolPriceUsd;
+}
+
+/**
+ * Get subscription price in SOL (calculated from fixed USD price)
+ */
+async function getSubscriptionPriceSol(tierId) {
+  const usdPrice = SUBSCRIPTION_PRICES_USD[tierId];
+  if (!usdPrice) return null;
+  const solPrice = await fetchSolPrice();
+  return parseFloat((usdPrice / solPrice).toFixed(6));
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PUBLIC API
@@ -97,10 +124,15 @@ export function recordFee({ type, amountSol, userWallet, mint, txHash }) {
 }
 
 /**
- * Get subscription price in SOL
+ * Get subscription price in SOL (dynamic based on current SOL/USD rate)
  */
-export function getSubscriptionPrice(tierId) {
-  return SUBSCRIPTION_PRICES[tierId] || null;
+export { getSubscriptionPriceSol as getSubscriptionPrice };
+
+/**
+ * Get subscription price in USD (fixed)
+ */
+export function getSubscriptionPriceUsd(tierId) {
+  return SUBSCRIPTION_PRICES_USD[tierId] || null;
 }
 
 /**
