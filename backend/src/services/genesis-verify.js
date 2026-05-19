@@ -144,17 +144,28 @@ async function verifyViaRPC(walletAddress) {
     const accounts = res.data?.result?.value || [];
 
     // Check if any token account holds an NFT (amount = 1, decimals = 0)
-    // and matches SGT mint pattern
-    // Note: This is less precise than Helius — would need additional metadata fetch
+    // Try to verify by checking if the mint's metadata matches SGT
     for (const account of accounts) {
       const parsed = account.account?.data?.parsed?.info;
       if (parsed?.tokenAmount?.decimals === 0 && parsed?.tokenAmount?.uiAmount === 1) {
-        // This is an NFT — but we can't easily verify collection without metadata
-        // For production, use Helius method instead
         const mint = parsed?.mint;
-        if (mint) {
-          // Would need to fetch metadata to verify collection
-          // For now, mark as unverified
+        if (!mint) continue;
+
+        // Fetch mint metadata to check group membership
+        try {
+          const mintInfo = await axios.post(RPC_URL, {
+            jsonrpc: '2.0', id: 1,
+            method: 'getAccountInfo',
+            params: [mint, { encoding: 'jsonParsed' }],
+          }, { timeout: 5000 });
+
+          const extensions = mintInfo.data?.result?.value?.data?.parsed?.info?.extensions || [];
+          const groupMember = extensions.find(e => e.extension === 'tokenGroupMember');
+          if (groupMember?.state?.group === SGT_GROUP_ADDRESS) {
+            return { hasGenesisToken: true, mintAddress: mint };
+          }
+        } catch {
+          // Skip this NFT, try next
         }
       }
     }

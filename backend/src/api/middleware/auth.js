@@ -12,7 +12,12 @@ import nacl from 'tweetnacl';
 import bs58 from 'bs58';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'sniperai-dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('❌ JWT_SECRET not set in .env — backend cannot start securely.');
+  console.error('   Generate one: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  process.exit(1);
+}
 const JWT_EXPIRES_IN = '7d';
 
 /**

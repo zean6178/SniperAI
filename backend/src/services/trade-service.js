@@ -9,6 +9,7 @@
 import { Connection, VersionedTransaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import axios from 'axios';
 import { savePosition, updatePosition, closePosition, recordBuy } from '../../../state.js';
+import { buildAutoSplitInstructions, calculateSwapFee, recordFee } from './revenue-service.js';
 
 const RPC_URL = process.env.RPC_URL || 'https://api.mainnet-beta.solana.com';
 
@@ -160,6 +161,10 @@ export async function submitTransaction({ signedTransaction, mint, amountSol, se
   await connection.confirmTransaction(txHash, 'confirmed');
 
   if (type === 'buy') {
+    // Record platform fee
+    const fee = calculateSwapFee(amountSol);
+    recordFee({ type: 'swap_fee', amountSol: fee.feeSol, userWallet: wallet, mint, txHash });
+
     // Save position to state
     savePosition(mint, {
       symbol: symbol || mint.slice(0, 8),
