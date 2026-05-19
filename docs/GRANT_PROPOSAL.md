@@ -68,7 +68,7 @@ A native Android app for Solana Seeker that acts as an AI trading copilot:
 | **Mobile Wallet Adapter** | Seamless wallet connection, no external wallets needed |
 | **Push Notifications** | Real-time alerts for high-score tokens & exit signals |
 | **dApp Store** | Primary distribution channel (0% platform fee) |
-| **Genesis Token** | Verify Seeker ownership for exclusive features |
+| **Genesis Token** | Verify Seeker ownership for exclusive features (50% subscription discount) |
 
 ### SKR Token Integration:
 
@@ -83,24 +83,19 @@ A native Android app for Solana Seeker that acts as an AI trading copilot:
 
 ## Technical Architecture
 
-### Already Built (Carter Bot Engine):
-- ✅ PumpPortal WebSocket listener (real-time token detection)
-- ✅ Multi-factor screening pipeline (scoring 0-100)
-- ✅ Bundle detection (insider sniping prevention)
-- ✅ Deployer history analysis (serial rugger detection)
-- ✅ Risk management (max positions, daily limits, cooldown)
-- ✅ Tiered take-profit / trailing stop / rug detection
-- ✅ PumpPortal + Jupiter execution (buy/sell)
-- ✅ Position monitoring with auto-exit logic
-
-### To Be Built:
-- [ ] REST/WebSocket API layer (expose bot logic to mobile)
-- [ ] React Native mobile app (Seeker-optimized)
-- [ ] Solana Mobile SDK integration (Seed Vault + MWA)
-- [ ] Push notification service (FCM)
-- [ ] AI chat engine (intent parsing + token search)
-- [ ] PostgreSQL + Redis data layer (multi-user support)
-- [ ] SKR token integration
+### Already Built:
+- PumpPortal WebSocket listener (real-time token detection)
+- Hybrid Signal Merger (3 sources: WS + Signal Server + Jupiter Trending)
+- Multi-factor screening pipeline (scoring 0-100)
+- Bundle detection (insider sniping prevention)
+- Deployer history analysis (serial rugger detection)
+- Risk management (max positions, daily limits, cooldown)
+- Tiered take-profit / trailing stop / rug detection
+- PumpPortal + Jupiter execution (buy/sell)
+- Position monitoring with auto-exit logic
+- Backend API (Fastify REST + WebSocket, 13 endpoints)
+- Mobile App (React Native, 5 screens, Seed Vault integration)
+- Revenue system (auto-split to 3 wallets)
 
 ### Stack:
 ```
@@ -152,19 +147,21 @@ Infra:    Railway/Render + Cloudflare
 
 ## Grant Request
 
-### Amount: $25,000 - $50,000
+### Amount: $35,000
 
 ### Allocation:
-| Category | Amount | Purpose |
-|----------|--------|---------|
-| Development | 60% | Mobile app development, SDK integration |
-| Infrastructure | 15% | Servers, RPC endpoints, databases |
-| AI/LLM costs | 10% | OpenRouter API credits for chat feature |
-| Marketing | 10% | Launch campaign, content, community |
-| Contingency | 5% | Unexpected costs |
+
+| Category | Amount | Monthly | Breakdown |
+|----------|--------|---------|-----------|
+| Development | $21,000 (60%) | $2,333/mo | 9 weeks: 1 full-stack dev (React Native + Node.js + Solana SDK) |
+| Infrastructure | $5,250 (15%) | $583/mo | RPC (Helius): $500/mo, Server (Railway): $200/mo, DB (Redis/Postgres): $100/mo |
+| AI/LLM costs | $3,500 (10%) | $389/mo | OpenRouter GPT-4o-mini: ~$0.15/query x 2,500 queries/mo = $375/mo |
+| Marketing | $3,500 (10%) | $389/mo | dApp Store listing: $0, Twitter ads/content: $300/mo, community: $89/mo |
+| Contingency | $1,750 (5%) | $194/mo | Unexpected: RPC rate limit upgrades, API cost spikes |
+| **Total** | **$35,000** | | |
 
 ### Why This Grant:
-1. **Already have working core** — Bot engine is built and tested (open source on GitHub)
+1. **Already have working core** — Bot engine + backend API + mobile app built and tested
 2. **Clear path to launch** — 9-week roadmap with specific deliverables
 3. **Revenue-generating** — Self-sustaining after launch via swap fees + premium
 4. **Grows Seeker ecosystem** — Brings active traders to dApp Store daily
