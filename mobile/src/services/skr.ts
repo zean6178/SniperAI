@@ -97,7 +97,38 @@ export async function unstakeSKR(amount: number) {
 }
 
 // ─── Referral ─────────────────────────────────────────────────────────────────
+
+/**
+ * Referral Requirements:
+ * Reward (10 SKR) hanya diberikan jika teman yang di-refer sudah memenuhi SEMUA syarat:
+ * 1. Execute trade (minimal 1 trade)
+ * 2. Profitable trade (minimal 1 trade profit)
+ * 3. 7-day streak (login 7 hari berturut-turut)
+ * 
+ * Jika belum memenuhi semua syarat → status "pending"
+ * Setelah semua terpenuhi → auto-credit 10 SKR ke referrer
+ */
+export const REFERRAL_REQUIREMENTS = {
+  minTrades: 1,
+  minProfitableTrades: 1,
+  minStreakDays: 7,
+};
+
 export async function getReferralInfo() {
   try { return await api.get('/skr/referral'); }
-  catch { return { referralCode: '', totalReferred: 0, totalEarned: 0 }; }
+  catch { return { referralCode: '', totalReferred: 0, totalEarned: 0, pending: [] }; }
+}
+
+export async function getReferralStatus(referredWallet: string) {
+  try { return await api.get(`/skr/referral/status?wallet=${referredWallet}`); }
+  catch {
+    return {
+      wallet: referredWallet,
+      hasTraded: false,
+      hasProfitableTrade: false,
+      has7DayStreak: false,
+      isComplete: false,
+      rewardClaimed: false,
+    };
+  }
 }
