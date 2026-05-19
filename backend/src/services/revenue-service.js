@@ -16,7 +16,13 @@
 import { Connection, PublicKey, LAMPORTS_PER_SOL, SystemProgram, Transaction } from '@solana/web3.js';
 
 const RPC_URL = process.env.RPC_URL || 'https://api.mainnet-beta.solana.com';
-const TREASURY_WALLET = process.env.TREASURY_WALLET || '';
+
+// ─── 3 Wallets for Auto-Split Revenue ─────────────────────────────────────────
+const WALLETS = {
+  treasury:    process.env.TREASURY_WALLET    || '4tifC6mukaYFh333k3pFn3U4wNkTCWUFEUSYkURMZJtZ',
+  rewardPool:  process.env.REWARD_POOL_WALLET || 'BCH8jvDam9n6cTDjzbcjy3LWJPQUENnacskvPsz4MsUQ',
+  development: process.env.DEV_FUND_WALLET    || 'En1foxxiV7d2siSDeX6s7gMCd1Gqc2UBLWPs4C9gWBkq',
+};
 
 // Revenue tracking (in-memory, replace with DB in production)
 const revenueLog = [];
@@ -70,14 +76,21 @@ async function getSubscriptionPriceSol(tierId) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Get treasury wallet address
+ * Get all revenue wallets
+ */
+export function getRevenueWallets() {
+  return { ...WALLETS };
+}
+
+/**
+ * Get treasury wallet address (primary/profit wallet)
  */
 export function getTreasuryWallet() {
-  if (!TREASURY_WALLET) {
-    console.warn('[revenue] ⚠️ TREASURY_WALLET not set in .env — fees will NOT be collected!');
+  if (!WALLETS.treasury) {
+    console.warn('[revenue] ⚠️ TREASURY_WALLET not set — fees will NOT be collected!');
     return null;
   }
-  return TREASURY_WALLET;
+  return WALLETS.treasury;
 }
 
 /**
@@ -99,6 +112,10 @@ export function calculateSwapFee(amountSol) {
  * Record a fee collection event
  */
 export function recordFee({ type, amountSol, userWallet, mint, txHash }) {
+  const profitSol     = amountSol * (FEE_CONFIG.distribution.profit / 100);
+  const rewardSol     = amountSol * (FEE_CONFIG.distribution.rewardPool / 100);
+  const devSol        = amountSol * (FEE_CONFIG.distribution.development / 100);
+
   const entry = {
     id: `fee_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     type,              // 'swap_fee' | 'subscription' | 'copy_trading'
@@ -106,20 +123,19 @@ export function recordFee({ type, amountSol, userWallet, mint, txHash }) {
     userWallet,
     mint: mint || null,
     txHash: txHash || null,
-    treasuryWallet: TREASURY_WALLET,
     distribution: {
-      profit: amountSol * (FEE_CONFIG.distribution.profit / 100),
-      rewardPool: amountSol * (FEE_CONFIG.distribution.rewardPool / 100),
-      development: amountSol * (FEE_CONFIG.distribution.development / 100),
+      profit:      { wallet: WALLETS.treasury,    amount: profitSol },
+      rewardPool:  { wallet: WALLETS.rewardPool,  amount: rewardSol },
+      development: { wallet: WALLETS.development, amount: devSol },
     },
     timestamp: new Date().toISOString(),
   };
 
   revenueLog.push(entry);
-  // Keep last 1000 entries
   if (revenueLog.length > 1000) revenueLog.shift();
 
   console.log(`[revenue] 💰 ${type}: +${amountSol.toFixed(6)} SOL from ${userWallet?.slice(0, 8)}…`);
+  console.log(`[revenue]    → Treasury: ${profitSol.toFixed(6)} | Rewards: ${rewardSol.toFixed(6)} | Dev: ${devSol.toFixed(6)}`);
   return entry;
 }
 
@@ -136,16 +152,73 @@ export function getSubscriptionPriceUsd(tierId) {
 }
 
 /**
- * Build transfer instruction to treasury (for including in user's trade tx)
- * This is the fee extraction mechanism — added to every swap transaction
+ * Build auto-split transfer instructions (3 wallets)
+ * These instructions are added to the user's trade transaction
+ * so fee is split atomically in a single tx.
+ * 
+ * @param {string} userPublicKey - User's wallet (payer)
+ * @param {number} totalFeeLamports - Total fee in lamports
+ * @returns {Array} - Array of SystemProgram.transfer instructions
+ */
+export function buildAutoSplitInstructions(userPublicKey, totalFeeLamports) {
+  if (!WALLETS.treasury || !WALLETS.rewardPool || !WALLETS.development) {
+    console.warn('[revenue] One or more wallets not configured — cannot split fees');
+    return [];
+  }
+
+  try {
+    const profitLamports = Math.floor(totalFeeLamports * FEE_CONFIG.distribution.profit / 100);
+    const rewardLamports = Math.floor(totalFeeLamports * FEE_CONFIG.distribution.rewardPool / 100);
+    const devLamports    = totalFeeLamports - profitLamports - rewardLamports; // Remainder to dev
+
+    const fromPubkey = new PublicKey(userPublicKey);
+
+    const instructions = [];
+
+    // 50% → Treasury (profit)
+    if (profitLamports > 0) {
+      instructions.push(SystemProgram.transfer({
+        fromPubkey,
+        toPubkey: new PublicKey(WALLETS.treasury),
+        lamports: profitLamports,
+      }));
+    }
+
+    // 30% → Reward Pool
+    if (rewardLamports > 0) {
+      instructions.push(SystemProgram.transfer({
+        fromPubkey,
+        toPubkey: new PublicKey(WALLETS.rewardPool),
+        lamports: rewardLamports,
+      }));
+    }
+
+    // 20% → Development Fund
+    if (devLamports > 0) {
+      instructions.push(SystemProgram.transfer({
+        fromPubkey,
+        toPubkey: new PublicKey(WALLETS.development),
+        lamports: devLamports,
+      }));
+    }
+
+    return instructions;
+  } catch (e) {
+    console.warn(`[revenue] Failed to build split instructions: ${e.message}`);
+    return [];
+  }
+}
+
+/**
+ * Legacy: single transfer to treasury only (fallback)
  */
 export function buildFeeTransferInstruction(userPublicKey, feeLamports) {
-  if (!TREASURY_WALLET) return null;
+  if (!WALLETS.treasury) return null;
 
   try {
     return SystemProgram.transfer({
       fromPubkey: new PublicKey(userPublicKey),
-      toPubkey: new PublicKey(TREASURY_WALLET),
+      toPubkey: new PublicKey(WALLETS.treasury),
       lamports: feeLamports,
     });
   } catch (e) {
@@ -166,7 +239,7 @@ export async function verifySubscriptionPayment(txHash, expectedAmount) {
     if (!tx || !tx.meta) return false;
 
     // Check if treasury received the expected amount
-    const treasuryPubkey = new PublicKey(TREASURY_WALLET);
+    const treasuryPubkey = new PublicKey(WALLETS.treasury);
     const treasuryIndex = tx.transaction.message.staticAccountKeys?.findIndex(
       key => key.equals(treasuryPubkey)
     );
@@ -219,6 +292,8 @@ export function getRevenueStats(period = 'today') {
       rewardPool: parseFloat((totalSol * FEE_CONFIG.distribution.rewardPool / 100).toFixed(6)),
       development: parseFloat((totalSol * FEE_CONFIG.distribution.development / 100).toFixed(6)),
     },
-    treasuryWallet: TREASURY_WALLET || 'NOT SET',
+    treasuryWallet: WALLETS.treasury || 'NOT SET',
+    rewardPoolWallet: WALLETS.rewardPool || 'NOT SET',
+    developmentWallet: WALLETS.development || 'NOT SET',
   };
 }
