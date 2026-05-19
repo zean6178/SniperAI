@@ -255,32 +255,56 @@ function startHybridPolling() {
 }
 
 // ─── Signal Server — api.thecharon.xyz ────────────────────────────────────────
+// ✅ FIX #3: Log errors (not silent) + FIX #4: Pagination support
 async function fetchSignalServer() {
   const hy = getConfig().hybrid;
+  let page = 1;
+  let totalProcessed = 0;
+
   try {
-    const url = new URL('/api/signals', hy.signalServerUrl);
-    url.searchParams.set('limit', '100');
-    url.searchParams.set('minSources', '1');
+    while (true) {
+      const url = new URL('/api/signals', hy.signalServerUrl);
+      url.searchParams.set('limit', '100');
+      url.searchParams.set('page', String(page));
+      url.searchParams.set('minSources', '1');
 
-    const res = await fetch(url.toString(), {
-      headers: hy.signalServerKey ? { 'x-api-key': hy.signalServerKey } : {},
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) return;
+      const res = await fetch(url.toString(), {
+        headers: hy.signalServerKey ? { 'x-api-key': hy.signalServerKey } : {},
+        signal: AbortSignal.timeout(10000),
+      });
 
-    const data = await res.json();
-    const signals = data?.signals || [];
+      if (!res.ok) {
+        console.warn(chalk.yellow(`[hybrid:server] HTTP ${res.status} from signal server (page ${page})`));
+        break;
+      }
 
-    for (const sig of signals) {
-      if (!sig.mint) continue;
-      onServerSignal(sig);
+      const data = await res.json();
+      const signals = data?.signals || [];
+
+      for (const sig of signals) {
+        if (!sig.mint) continue;
+        onServerSignal(sig);
+        totalProcessed++;
+      }
+
+      // Stop if less than limit returned (no more pages)
+      if (signals.length < 100) break;
+
+      // Safety: max 5 pages to prevent infinite loop
+      page++;
+      if (page > 5) break;
     }
 
-    if (signals.length > 0) {
-      console.log(chalk.gray(`[hybrid:server] ${signals.length} signals processed`));
+    if (totalProcessed > 0) {
+      console.log(chalk.gray(`[hybrid:server] ${totalProcessed} signals processed (${page} page(s))`));
     }
   } catch (e) {
-    // Silent — network errors are normal
+    // ✅ FIX #3: Log error instead of silent swallow
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+      console.warn(chalk.yellow(`[hybrid:server] Timeout fetching signals`));
+    } else {
+      console.warn(chalk.yellow(`[hybrid:server] Error: ${e.message}`));
+    }
   }
 }
 

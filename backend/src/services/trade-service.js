@@ -146,14 +146,14 @@ export async function prepareSellTransaction({ wallet, mint, sellPct, slippageBp
 /**
  * Submit signed transaction to blockchain
  */
-export async function submitTransaction({ signedTransaction, mint, amountSol, sellPct, wallet, type }) {
+export async function submitTransaction({ signedTransaction, mint, amountSol, sellPct, wallet, type, symbol }) {
   const connection = getConnection();
 
   const txBuf = Buffer.from(signedTransaction, 'base64');
   const tx = VersionedTransaction.deserialize(txBuf);
 
   const txHash = await connection.sendRawTransaction(tx.serialize(), {
-    skipPreflight: true,
+    skipPreflight: false,  // ✅ FIX #5: Don't skip preflight — catch errors before broadcast
     maxRetries: 3,
   });
 
@@ -162,7 +162,7 @@ export async function submitTransaction({ signedTransaction, mint, amountSol, se
   if (type === 'buy') {
     // Save position to state
     savePosition(mint, {
-      symbol: '',
+      symbol: symbol || mint.slice(0, 8),
       entryAmountSol: amountSol,
       entryPriceSol: 0,
       tokenAmount: 0,
@@ -172,7 +172,7 @@ export async function submitTransaction({ signedTransaction, mint, amountSol, se
 
     return {
       txHash,
-      position: { mint, entryAmountSol: amountSol, openedAt: new Date().toISOString() },
+      position: { mint, symbol: symbol || mint.slice(0, 8), entryAmountSol: amountSol, openedAt: new Date().toISOString() },
     };
   }
 

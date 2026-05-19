@@ -7,6 +7,10 @@
  *   3. Jupiter Trending (momentum signal, 20% weight)
  * 
  * Flow: WS/Server/Trending → merger → weighted score → screening → executor
+ * 
+ * Fixes v2:
+ *   - Per-mint lock instead of global isProcessing mutex (#1)
+ *   - fastScore() enhanced with deployer + holder heuristics (#2)
  */
 
 import chalk from 'chalk';
@@ -17,12 +21,15 @@ import { getConfig } from './config.js';
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const signalQueue = new Map(); // mint → { wsData, serverData, trendingData, firstSeen }
-let isProcessing = false;
+const processingMints = new Set(); // ✅ FIX #1: Per-mint lock instead of global mutex
 
 function pruneQueue() {
   const cutoff = Date.now() - getConfig().hybrid.dedupWindowMs;
   for (const [mint, entry] of signalQueue) {
-    if (entry.firstSeen < cutoff) signalQueue.delete(mint);
+    if (entry.firstSeen < cutoff) {
+      signalQueue.delete(mint);
+      processingMints.delete(mint);
+    }
   }
 }
 
@@ -44,7 +51,6 @@ export function onWsToken(tokenData) {
     });
   }
   pruneQueue();
-
   evalSignal(mint, 'fast_snipe');
 }
 
@@ -58,7 +64,6 @@ export function onServerSignal(signalData) {
   const entry = signalQueue.get(mint);
   if (entry) {
     entry.serverData = signalData;
-    // Kalo WS juga udah ada → high_confidence
     evalSignal(mint, entry.wsData ? 'high_confidence' : 'swing');
   } else {
     signalQueue.set(mint, {
@@ -71,7 +76,7 @@ export function onServerSignal(signalData) {
   }
 }
 
-// ─── Ingest dari Trending (update score-only) ─────────────────────────────────
+// ─── Ingest dari Trending (update score-only, no trigger) ─────────────────────
 export function onTrendingData(trendingData) {
   if (!getConfig().hybrid.enabled) return;
 
@@ -81,17 +86,17 @@ export function onTrendingData(trendingData) {
   const entry = signalQueue.get(mint);
   if (entry) {
     entry.trendingData = trendingData;
-    // Trending gak trigger entry — cuma update score
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// EVALUATION ENGINE
+// EVALUATION ENGINE — ✅ FIX #1: Per-mint lock
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function evalSignal(mint, strategy) {
-  if (isProcessing) return;
-  isProcessing = true;
+  // Per-mint lock — other mints can process in parallel
+  if (processingMints.has(mint)) return;
+  processingMints.add(mint);
 
   try {
     const config = getConfig();
@@ -102,24 +107,16 @@ async function evalSignal(mint, strategy) {
     let combinedScore = 0;
     let totalWeight = 0;
 
-    // WS score
     if (entry.wsData) {
-      const wsScore = fastScore(entry.wsData);
-      combinedScore += wsScore * hy.wsWeight;
+      combinedScore += fastScore(entry.wsData) * hy.wsWeight;
       totalWeight += hy.wsWeight;
     }
-
-    // Server score
     if (entry.serverData) {
-      const serverScore = calcServerScore(entry.serverData);
-      combinedScore += serverScore * hy.serverWeight;
+      combinedScore += calcServerScore(entry.serverData) * hy.serverWeight;
       totalWeight += hy.serverWeight;
     }
-
-    // Trending score
     if (entry.trendingData) {
-      const trendingScore = calcTrendingScore(entry.trendingData);
-      combinedScore += trendingScore * hy.trendingWeight;
+      combinedScore += calcTrendingScore(entry.trendingData) * hy.trendingWeight;
       totalWeight += hy.trendingWeight;
     }
 
@@ -130,7 +127,6 @@ async function evalSignal(mint, strategy) {
       `Score: ${finalScore}/100 | Sources: ${entry.wsData ? 'WS' : ''}${entry.serverData ? '+Server' : ''}${entry.trendingData ? '+Trending' : ''}`
     ));
 
-    // Threshold per strategy
     const threshold = strategy === 'high_confidence' ? 50
                     : strategy === 'fast_snipe' ? 65
                     : 60;
@@ -140,7 +136,6 @@ async function evalSignal(mint, strategy) {
       return;
     }
 
-    // Forward ke onNewToken callback (screening pipeline atau Telegram)
     if (onDecision) {
       onDecision({
         mint,
@@ -160,14 +155,14 @@ async function evalSignal(mint, strategy) {
       });
     }
   } catch (e) {
-    console.error(chalk.red(`[merger] Error: ${e.message}`));
+    console.error(chalk.red(`[merger] Error evaluating ${mint.slice(0, 8)}: ${e.message}`));
   } finally {
-    isProcessing = false;
+    processingMints.delete(mint); // Always release lock
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FAST SCORE — dari WS data (instant, tanpa RPC call)
+// FAST SCORE — ✅ FIX #2: Enhanced with deployer + metadata heuristics
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function fastScore(token) {
@@ -176,12 +171,30 @@ function fastScore(token) {
   // Dev initial buy — not too big, not too small
   const initBuy = token.initialBuySol || 0;
   if (initBuy > 0.01 && initBuy < 1) score += 10;
-  else if (initBuy > 1) score -= 10;
+  else if (initBuy >= 1 && initBuy <= 3) score += 5;
+  else if (initBuy > 3) score -= 15;
 
-  // Market cap
+  // Market cap sweet spot
   const mcap = token.marketCapSol || 0;
-  if (mcap > 10 && mcap < 500) score += 10;
-  else if (mcap > 500) score -= 5;
+  if (mcap > 5 && mcap < 100) score += 15;
+  else if (mcap >= 100 && mcap < 500) score += 5;
+  else if (mcap >= 500) score -= 10;
+
+  // Deployer address heuristic
+  if (token.deployer) {
+    if (token.deployer.length < 32) score -= 10;
+  } else {
+    score -= 5;
+  }
+
+  // Has metadata URI (tokens without URI are often rugs)
+  if (token.uri && token.uri.length > 10) score += 5;
+  else score -= 5;
+
+  // Symbol length heuristic
+  const sym = token.symbol || '';
+  if (sym.length >= 3 && sym.length <= 8) score += 5;
+  else if (sym.length > 15) score -= 10;
 
   return Math.max(0, Math.min(100, score));
 }
@@ -192,25 +205,18 @@ function fastScore(token) {
 
 function calcServerScore(signal) {
   let score = 50;
-
-  const srcCount = signal.sourceCount || 1;
-  score += (srcCount - 1) * 10;
-
+  score += ((signal.sourceCount || 1) - 1) * 10;
   if (signal.trendingRank && signal.trendingRank <= 10) score += 20;
   else if (signal.trendingRank && signal.trendingRank <= 50) score += 10;
-
   const vol24h = signal.volume24h || 0;
   if (vol24h > 10000) score += 15;
   else if (vol24h > 1000) score += 10;
   else if (vol24h > 100) score += 5;
-
   const holders = signal.holders || 0;
   if (holders > 100) score += 10;
   else if (holders > 50) score += 5;
-
   if (signal.feeClaim) score += 15;
   if (signal.graduated) score += 10;
-
   return Math.max(0, Math.min(100, score));
 }
 
@@ -220,24 +226,19 @@ function calcServerScore(signal) {
 
 function calcTrendingScore(trend) {
   let score = 50;
-
   const rank = trend.rank || 999;
   if (rank <= 5) score += 25;
   else if (rank <= 10) score += 15;
   else if (rank <= 25) score += 10;
   else if (rank <= 50) score += 5;
-
   const volume = trend.volume || 0;
   if (volume > 50000) score += 15;
   else if (volume > 5000) score += 10;
-
   const mcap = trend.market_cap || 0;
   if (mcap > 10000 && mcap < 1000000) score += 10;
-
   const holders = trend.holder_count || 0;
   if (holders > 200) score += 10;
   else if (holders > 50) score += 5;
-
   return Math.max(0, Math.min(100, score));
 }
 
@@ -254,6 +255,6 @@ export function setOnDecision(callback) {
 export function getMergerStatus() {
   return {
     queueSize: signalQueue.size,
-    processing: isProcessing,
+    processingCount: processingMints.size,
   };
 }
