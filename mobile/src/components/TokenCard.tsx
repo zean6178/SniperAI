@@ -1,10 +1,12 @@
 /**
- * TokenCard — Compact card for token feed
+ * TokenCard — Clean card for token feed
+ * Phantom-inspired: subtle borders, clean spacing, purple accents
  */
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import ScoreBadge from './ScoreBadge';
+import { colors, spacing, radius, typography, shadows } from '../theme';
 
 interface Props {
   token: any;
@@ -16,31 +18,38 @@ export default function TokenCard({ token, onPress }: Props) {
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.row}>
-        <View style={styles.left}>
-          <Text style={styles.symbol}>{token.symbol || '???'}</Text>
-          <Text style={styles.name} numberOfLines={1}>{token.name || 'Unknown'}</Text>
+      <View style={styles.header}>
+        <View style={styles.tokenInfo}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>
+              {(token.symbol || '?')[0]}
+            </Text>
+          </View>
+          <View style={styles.nameContainer}>
+            <Text style={styles.symbol}>{token.symbol || '???'}</Text>
+            <Text style={styles.name} numberOfLines={1}>{token.name || 'Unknown Token'}</Text>
+          </View>
         </View>
         <ScoreBadge score={token.score} decision={token.decision} />
       </View>
 
       <View style={styles.metrics}>
-        <Metric label="MC" value={`${(token.marketCapSol || 0).toFixed(1)} SOL`} />
-        <Metric label="Vol 5m" value={`${(token.volume5mSol || 0).toFixed(1)} SOL`} />
-        <Metric label="Buys" value={`${token.buyCount5m || 0}`} />
-        <Metric label="Age" value={age} />
+        <MetricPill label="MC" value={`${(token.marketCapSol || 0).toFixed(1)} SOL`} />
+        <MetricPill label="Vol" value={`${(token.volume5mSol || 0).toFixed(1)}`} />
+        <MetricPill label="Buys" value={`${token.buyCount5m || 0}`} />
+        <MetricPill label="Age" value={age} />
       </View>
 
       {token.isBundled && (
-        <View style={styles.warning}>
-          <Text style={styles.warningText}>🚫 Bundled Launch</Text>
+        <View style={styles.warningBanner}>
+          <Text style={styles.warningText}>⚠ Bundled Launch Detected</Text>
         </View>
       )}
     </TouchableOpacity>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function MetricPill({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.metric}>
       <Text style={styles.metricLabel}>{label}</Text>
@@ -61,23 +70,83 @@ function getAge(detectedAt: string): string {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#1a1a2e', borderRadius: 12,
-    padding: 14, marginBottom: 8,
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+    ...shadows.sm,
   },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  left: { flex: 1 },
-  symbol: { color: '#fff', fontSize: 18, fontWeight: '800' },
-  name: { color: '#888', fontSize: 12, marginTop: 2 },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  tokenInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.bg.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  avatarText: {
+    ...typography.h3,
+    color: colors.purple[400],
+  },
+  nameContainer: {
+    flex: 1,
+  },
+  symbol: {
+    ...typography.h4,
+    color: colors.text.primary,
+  },
+  name: {
+    ...typography.bodySm,
+    color: colors.text.tertiary,
+    marginTop: 2,
+  },
   metrics: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    marginTop: 10, paddingTop: 10,
-    borderTopWidth: 1, borderTopColor: '#252540',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
   },
-  metric: { alignItems: 'center' },
-  metricLabel: { color: '#666', fontSize: 10 },
-  metricValue: { color: '#ccc', fontSize: 12, fontWeight: '600', marginTop: 2 },
-  warning: {
-    marginTop: 8, backgroundColor: '#3d1515', borderRadius: 6, paddingVertical: 4, paddingHorizontal: 8,
+  metric: {
+    alignItems: 'center',
+    flex: 1,
   },
-  warningText: { color: '#ff6b6b', fontSize: 11, fontWeight: '600' },
+  metricLabel: {
+    ...typography.caption,
+    color: colors.text.tertiary,
+    textTransform: 'uppercase',
+  },
+  metricValue: {
+    ...typography.label,
+    color: colors.text.secondary,
+    marginTop: 3,
+  },
+  warningBanner: {
+    marginTop: spacing.md,
+    backgroundColor: 'rgba(248, 113, 113, 0.1)',
+    borderRadius: radius.sm,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(248, 113, 113, 0.2)',
+  },
+  warningText: {
+    ...typography.labelSm,
+    color: colors.danger,
+    textAlign: 'center',
+  },
 });

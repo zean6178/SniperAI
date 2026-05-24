@@ -1,5 +1,8 @@
 /**
- * AIChatScreen — Natural language token discovery + explanation
+ * AIChatScreen — AI copilot chat interface
+ * 
+ * Clean chat bubbles with purple accent for AI responses.
+ * Phantom-style input bar at bottom.
  */
 
 import React, { useState, useRef } from 'react';
@@ -8,17 +11,24 @@ import {
   FlatList, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
 import { api } from '../services/api';
+import { colors, spacing, radius, typography, shadows } from '../theme';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   tokens?: any[];
+  timestamp: number;
 }
 
 export default function AIChatScreen({ navigation }: any) {
   const [messages, setMessages] = useState<Message[]>([
-    { id: '0', role: 'assistant', content: '👋 I\'m your AI copilot.\n\nTry:\n• "Find tokens >80 score"\n• "What is bundling?"\n• "Best strategy?"\n• "Show trending"' },
+    {
+      id: '0',
+      role: 'assistant',
+      content: 'Hey! I\'m your AI trading copilot.\n\nI can help you with:\n• Finding high-score tokens\n• Explaining token analysis\n• Trading strategies\n• Market insights',
+      timestamp: Date.now(),
+    },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,81 +38,276 @@ export default function AIChatScreen({ navigation }: any) {
     const text = input.trim();
     if (!text || isLoading) return;
 
-    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: text }]);
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: text,
+      timestamp: Date.now(),
+    };
+    setMessages(prev => [...prev, userMsg]);
     setInput('');
     setIsLoading(true);
 
     try {
       const res = await api.post('/ai/query', { message: text });
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(), role: 'assistant',
-        content: res.reply || 'No response', tokens: res.tokens,
-      }]);
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: res.reply || 'No response',
+        tokens: res.tokens,
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, assistantMsg]);
     } catch {
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(), role: 'assistant',
+      const assistantMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
         content: processLocal(text),
-      }]);
+        timestamp: Date.now(),
+      };
+      setMessages(prev => [...prev, assistantMsg]);
     } finally {
       setIsLoading(false);
-      setTimeout(() => listRef.current?.scrollToEnd(), 100);
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 150);
     }
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={90}
+    >
       <FlatList
         ref={listRef}
         data={messages}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <View style={[styles.bubble, item.role === 'user' ? styles.bubbleUser : styles.bubbleAI]}>
-            <Text style={[styles.text, item.role === 'user' ? styles.textUser : styles.textAI]}>{item.content}</Text>
-            {item.tokens?.map((t: any, i: number) => (
-              <TouchableOpacity key={i} style={styles.tokenRow} onPress={() => navigation.navigate('TokenDetail', { token: t, mint: t.mint })}>
-                <Text style={styles.tokenSym}>{t.symbol}</Text>
-                <Text style={styles.tokenScore}>Score: {t.score}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-        contentContainerStyle={{ padding: 12 }}
-        onContentSizeChange={() => listRef.current?.scrollToEnd()}
+        renderItem={({ item }) => <ChatBubble message={item} navigation={navigation} />}
+        contentContainerStyle={styles.chatList}
+        onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+        showsVerticalScrollIndicator={false}
       />
-      {isLoading && <View style={styles.loading}><ActivityIndicator color="#00d4aa" /><Text style={styles.loadText}>Thinking...</Text></View>}
-      <View style={styles.inputRow}>
-        <TextInput style={styles.input} value={input} onChangeText={setInput} placeholder="Ask about tokens..." placeholderTextColor="#555" returnKeyType="send" onSubmitEditing={send} />
-        <TouchableOpacity style={[styles.sendBtn, !input.trim() && { backgroundColor: '#333' }]} onPress={send} disabled={!input.trim() || isLoading}>
-          <Text style={{ fontSize: 20 }}>🚀</Text>
+
+      {/* Typing indicator */}
+      {isLoading && (
+        <View style={styles.typingRow}>
+          <View style={styles.typingDots}>
+            <ActivityIndicator color={colors.purple[400]} size="small" />
+            <Text style={styles.typingText}>Thinking...</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Input bar */}
+      <View style={styles.inputBar}>
+        <TextInput
+          style={styles.input}
+          value={input}
+          onChangeText={setInput}
+          placeholder="Ask anything about tokens..."
+          placeholderTextColor={colors.text.disabled}
+          returnKeyType="send"
+          onSubmitEditing={send}
+          multiline
+          maxLength={500}
+        />
+        <TouchableOpacity
+          style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
+          onPress={send}
+          disabled={!input.trim() || isLoading}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.sendIcon}>↑</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
+function ChatBubble({ message, navigation }: { message: Message; navigation: any }) {
+  const isUser = message.role === 'user';
+
+  return (
+    <View style={[styles.bubbleContainer, isUser && styles.bubbleContainerUser]}>
+      {!isUser && (
+        <View style={styles.aiAvatar}>
+          <Text style={styles.aiAvatarText}>◉</Text>
+        </View>
+      )}
+      <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAI]}>
+        <Text style={[styles.bubbleText, isUser ? styles.textUser : styles.textAI]}>
+          {message.content}
+        </Text>
+
+        {/* Token suggestions */}
+        {message.tokens?.map((t: any, i: number) => (
+          <TouchableOpacity
+            key={i}
+            style={styles.tokenSuggestion}
+            onPress={() => navigation.navigate('TokenDetail', { token: t, mint: t.mint })}
+            activeOpacity={0.7}
+          >
+            <View style={styles.tokenSugLeft}>
+              <Text style={styles.tokenSugSymbol}>{t.symbol}</Text>
+            </View>
+            <View style={styles.tokenSugBadge}>
+              <Text style={styles.tokenSugScore}>{t.score}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// Offline AI responses
 function processLocal(q: string): string {
   const l = q.toLowerCase();
-  if (l.includes('bundle')) return '🚫 Bundling = deployer uses multiple wallets to buy their own token at launch (<2s). Our bot detects >3 wallets buying simultaneously and auto-skips.';
-  if (l.includes('strategy') || l.includes('tip')) return '💡 Strategy:\n1. Only score ≥70\n2. Max 0.5 SOL/snipe\n3. TP: 50% @2x, 30% @3x\n4. SL: -40%\n5. Max 3 positions\n6. Skip bundles always';
-  if (l.includes('score') || l.includes('explain')) return '📊 Score (0-100):\n• Momentum (buys, volume)\n• Organic check (unique buyers)\n• Holder distribution\n• Dev wallet %\n• Bonding curve\n• Bundle detection\n\n≥70=SNIPE, 50-69=WATCH, <50=SKIP';
-  if (l.includes('trending') || l.includes('hot')) return '🔥 Check the Feed tab for live trending tokens!';
-  return '🤔 Try: "What is bundling?", "Best strategy?", "Explain score"';
+  if (l.includes('bundle') || l.includes('bundl'))
+    return 'Bundling is when a deployer uses multiple wallets to buy their own token at launch (within 2 seconds). SniperAI detects 3+ wallets buying simultaneously and automatically skips these tokens.';
+  if (l.includes('strategy') || l.includes('tip'))
+    return 'Recommended Strategy:\n\n1. Only trade tokens with score ≥ 70\n2. Max 0.5 SOL per snipe\n3. Take profit: 50% at 2x, 30% at 3x\n4. Stop loss: -40%\n5. Max 3 concurrent positions\n6. Always skip bundled launches';
+  if (l.includes('score') || l.includes('explain'))
+    return 'Score Breakdown (0-100):\n\n• Momentum — buy count & volume\n• Organic — unique buyer ratio\n• Distribution — holder spread\n• Dev wallet — deployer holding %\n• Bonding curve — progress\n• Bundle check — launch pattern\n\n≥70 = SNIPE\n50-69 = WATCH\n<50 = SKIP';
+  if (l.includes('trending') || l.includes('hot'))
+    return 'Check the Discover tab for live trending tokens with real-time scores!';
+  return 'I can help with:\n\n• "What is bundling?"\n• "Best trading strategy"\n• "Explain the scoring system"\n• "Show trending tokens"';
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0D0D0D' },
-  bubble: { maxWidth: '85%', borderRadius: 16, padding: 12, marginBottom: 8 },
-  bubbleUser: { backgroundColor: '#00d4aa', alignSelf: 'flex-end' },
-  bubbleAI: { backgroundColor: '#1a1a2e', alignSelf: 'flex-start' },
-  text: { fontSize: 14, lineHeight: 20 },
-  textUser: { color: '#000' },
-  textAI: { color: '#ddd' },
-  tokenRow: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: '#252540', borderRadius: 8, padding: 8, marginTop: 6 },
-  tokenSym: { color: '#fff', fontWeight: '700' },
-  tokenScore: { color: '#00d4aa', fontWeight: '600' },
-  loading: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 6 },
-  loadText: { color: '#888', marginLeft: 8 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', padding: 8, borderTopWidth: 1, borderTopColor: '#1a1a2e' },
-  input: { flex: 1, backgroundColor: '#1a1a2e', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, color: '#fff', marginRight: 8 },
-  sendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#00d4aa', alignItems: 'center', justifyContent: 'center' },
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg.primary,
+  },
+  chatList: {
+    padding: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  bubbleContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginBottom: spacing.md,
+    maxWidth: '88%',
+  },
+  bubbleContainerUser: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row-reverse',
+  },
+  aiAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.purple[500],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.sm,
+    marginBottom: 2,
+  },
+  aiAvatarText: {
+    fontSize: 14,
+    color: '#FFF',
+  },
+  bubble: {
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    maxWidth: '100%',
+  },
+  bubbleUser: {
+    backgroundColor: colors.purple[500],
+    borderBottomRightRadius: radius.xs,
+  },
+  bubbleAI: {
+    backgroundColor: colors.bg.secondary,
+    borderBottomLeftRadius: radius.xs,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  bubbleText: {
+    ...typography.body,
+    lineHeight: 21,
+  },
+  textUser: {
+    color: '#FFFFFF',
+  },
+  textAI: {
+    color: colors.text.secondary,
+  },
+  tokenSuggestion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.bg.tertiary,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+  },
+  tokenSugLeft: {},
+  tokenSugSymbol: {
+    ...typography.label,
+    color: colors.text.primary,
+  },
+  tokenSugBadge: {
+    backgroundColor: `${colors.purple[400]}20`,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+  },
+  tokenSugScore: {
+    ...typography.numberSm,
+    color: colors.purple[400],
+  },
+  typingRow: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  typingDots: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  typingText: {
+    ...typography.bodySm,
+    color: colors.text.tertiary,
+  },
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border.subtle,
+    backgroundColor: colors.bg.primary,
+  },
+  input: {
+    flex: 1,
+    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    color: colors.text.primary,
+    ...typography.body,
+    maxHeight: 100,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
+  },
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.purple[500],
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+    ...shadows.purple,
+  },
+  sendBtnDisabled: {
+    backgroundColor: colors.bg.tertiary,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  sendIcon: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
 });

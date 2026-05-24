@@ -1,17 +1,23 @@
 /**
- * HomeScreen — Real-time token feed with score cards
+ * HomeScreen — Real-time token discovery feed
+ * 
+ * Clean, minimal layout with purple accent filters.
+ * Phantom-wallet-inspired: smooth scrolling, subtle cards, elegant spacing.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity,
 } from 'react-native';
 import TokenCard from '../components/TokenCard';
 import { useTokenFeed } from '../hooks/useTokenFeed';
+import { colors, spacing, radius, typography } from '../theme';
+
+type FilterType = 'all' | 'snipe' | 'watch';
 
 export default function HomeScreen({ navigation }: any) {
   const { tokens, isLoading, refresh, isConnected } = useTokenFeed({ minScore: 50 });
-  const [filter, setFilter] = useState<'all' | 'snipe' | 'watch'>('all');
+  const [filter, setFilter] = useState<FilterType>('all');
 
   const filteredTokens = tokens.filter(t => {
     if (filter === 'snipe') return t.decision === 'SNIPE';
@@ -21,30 +27,40 @@ export default function HomeScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      {/* Connection Status */}
+      {/* Status indicator */}
       <View style={styles.statusBar}>
-        <View style={[styles.dot, { backgroundColor: isConnected ? '#00d4aa' : '#ff4444' }]} />
-        <Text style={styles.statusText}>
-          {isConnected ? 'Live' : 'Connecting...'} • {tokens.length} tokens
+        <View style={styles.statusLeft}>
+          <View style={[styles.dot, { backgroundColor: isConnected ? colors.success : colors.danger }]} />
+          <Text style={styles.statusText}>
+            {isConnected ? 'Live' : 'Offline'}
+          </Text>
+        </View>
+        <Text style={styles.countText}>
+          {tokens.length} tokens
         </Text>
       </View>
 
-      {/* Filters */}
+      {/* Filter chips */}
       <View style={styles.filterRow}>
-        {(['all', 'snipe', 'watch'] as const).map(f => (
+        {([
+          { key: 'all', label: 'All' },
+          { key: 'snipe', label: 'Snipe' },
+          { key: 'watch', label: 'Watch' },
+        ] as const).map(({ key, label }) => (
           <TouchableOpacity
-            key={f}
-            style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
-            onPress={() => setFilter(f)}
+            key={key}
+            style={[styles.filterChip, filter === key && styles.filterChipActive]}
+            onPress={() => setFilter(key)}
+            activeOpacity={0.7}
           >
-            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>
-              {f === 'all' ? '📋 All' : f === 'snipe' ? '🎯 Snipe' : '👀 Watch'}
+            <Text style={[styles.filterText, filter === key && styles.filterTextActive]}>
+              {label}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      {/* Token Feed */}
+      {/* Token feed */}
       <FlatList
         data={filteredTokens}
         keyExtractor={(item) => item.mint}
@@ -55,41 +71,112 @@ export default function HomeScreen({ navigation }: any) {
           />
         )}
         refreshControl={
-          <RefreshControl refreshing={isLoading} onRefresh={refresh} tintColor="#00d4aa" />
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refresh}
+            tintColor={colors.purple[400]}
+            colors={[colors.purple[400]]}
+          />
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>
-              {isLoading ? '🔍 Scanning for tokens...' : '📭 No tokens match your filters'}
+            <Text style={styles.emptyIcon}>◎</Text>
+            <Text style={styles.emptyTitle}>
+              {isLoading ? 'Scanning...' : 'No tokens found'}
+            </Text>
+            <Text style={styles.emptySubtext}>
+              {isLoading ? 'Looking for opportunities' : 'Try adjusting your filters'}
             </Text>
           </View>
         }
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0D0D0D' },
+  container: {
+    flex: 1,
+    backgroundColor: colors.bg.primary,
+  },
   statusBar: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 8,
-    borderBottomWidth: 1, borderBottomColor: '#1a1a2e',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border.subtle,
   },
-  dot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
-  statusText: { color: '#888', fontSize: 12 },
+  statusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    marginRight: spacing.sm,
+  },
+  statusText: {
+    ...typography.bodySm,
+    color: colors.text.tertiary,
+  },
+  countText: {
+    ...typography.bodySm,
+    color: colors.text.tertiary,
+  },
   filterRow: {
-    flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 8, gap: 8,
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    gap: spacing.sm,
   },
-  filterBtn: {
-    paddingHorizontal: 14, paddingVertical: 6,
-    borderRadius: 16, backgroundColor: '#1a1a2e',
+  filterChip: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.bg.secondary,
+    borderWidth: 1,
+    borderColor: colors.border.subtle,
   },
-  filterBtnActive: { backgroundColor: '#00d4aa' },
-  filterText: { color: '#aaa', fontSize: 13 },
-  filterTextActive: { color: '#000', fontWeight: '700' },
-  list: { paddingHorizontal: 12, paddingBottom: 20 },
-  empty: { alignItems: 'center', marginTop: 60 },
-  emptyText: { color: '#666', fontSize: 16 },
+  filterChipActive: {
+    backgroundColor: colors.purple[500],
+    borderColor: colors.purple[500],
+  },
+  filterText: {
+    ...typography.label,
+    color: colors.text.tertiary,
+  },
+  filterTextActive: {
+    color: '#FFFFFF',
+  },
+  list: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xxxl,
+  },
+  empty: {
+    alignItems: 'center',
+    marginTop: 80,
+    paddingHorizontal: spacing.xxxl,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    color: colors.purple[400],
+    marginBottom: spacing.lg,
+    opacity: 0.5,
+  },
+  emptyTitle: {
+    ...typography.h4,
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+  },
+  emptySubtext: {
+    ...typography.bodySm,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+  },
 });

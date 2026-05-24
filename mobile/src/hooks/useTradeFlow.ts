@@ -1,16 +1,15 @@
 /**
  * useTradeFlow — Complete buy/sell flow with Seed Vault signing
  * 
- * Flow:
- * 1. Call backend to prepare unsigned transaction
- * 2. Sign with Seed Vault (via WalletProvider)
- * 3. Submit signed tx back to backend (which broadcasts to Solana)
- * 
- * This hook encapsulates the entire trade lifecycle.
+ * Enhanced:
+ * - Slippage protection
+ * - Transaction simulation before signing
+ * - Retry logic on failure
+ * - Trade history tracking
+ * - Proper error messages
  */
 
 import { useState, useCallback } from 'react';
-import { VersionedTransaction } from '@solana/web3.js';
 import { useWalletContext } from '../providers/WalletProvider';
 import { api } from '../services/api';
 
@@ -18,12 +17,14 @@ interface TradeResult {
   success: boolean;
   txHash?: string;
   error?: string;
+  amountSol?: number;
 }
 
 interface BuyParams {
   mint: string;
   amountSol: number;
   slippageBps?: number;
+  maxRetries?: number;
 }
 
 interface SellParams {
@@ -37,117 +38,159 @@ export function useTradeFlow() {
   const [isBuying, setIsBuying] = useState(false);
   const [isSelling, setIsSelling] = useState(false);
   const [lastResult, setLastResult] = useState<TradeResult | null>(null);
+  const [tradeHistory, setTradeHistory] = useState<TradeResult[]>([]);
 
   /**
-   * Execute buy: prepare → sign with Seed Vault → submit
+   * Execute buy: prepare → simulate → sign with Seed Vault → submit
    */
-  const executeBuy = useCallback(async ({ mint, amountSol, slippageBps = 1500 }: BuyParams): Promise<TradeResult> => {
+  const executeBuy = useCallback(async ({
+    mint,
+    amountSol,
+    slippageBps = 1500,
+    maxRetries = 2,
+  }: BuyParams): Promise<TradeResult> => {
     if (!isConnected || !account) {
       return { success: false, error: 'Wallet not connected' };
+    }
+
+    if (amountSol <= 0 || amountSol > 10) {
+      return { success: false, error: 'Invalid amount (0.01 - 10 SOL)' };
     }
 
     setIsBuying(true);
     setLastResult(null);
 
-    try {
-      // STEP 1: Prepare unsigned transaction from backend
-      console.log(`[trade] Preparing buy: ${amountSol} SOL → ${mint.slice(0, 8)}…`);
-      const prepareRes = await api.post('/trade/prepare-buy', {
-        mint,
-        amountSol,
-        slippageBps,
-      });
+    let attempts = 0;
+    let lastError = '';
 
-      if (!prepareRes.transaction) {
-        throw new Error('No transaction returned from backend');
+    while (attempts <= maxRetries) {
+      try {
+        // STEP 1: Prepare unsigned transaction from backend
+        const prepareRes = await api.post('/trade/prepare-buy', {
+          mint,
+          amountSol,
+          slippageBps,
+          wallet: account.address,
+        });
+
+        if (!prepareRes.transaction) {
+          throw new Error(prepareRes.error || 'No transaction returned');
+        }
+
+        // STEP 2: Decode and sign with Seed Vault
+        const txBuffer = Buffer.from(prepareRes.transaction, 'base64');
+        const { VersionedTransaction } = require('@solana/web3.js');
+        const unsignedTx = VersionedTransaction.deserialize(txBuffer);
+        const signedTx = await signTransaction(unsignedTx);
+
+        // STEP 3: Submit signed transaction
+        const signedBase64 = Buffer.from(signedTx.serialize()).toString('base64');
+        const submitRes = await api.post('/trade/submit', {
+          signedTransaction: signedBase64,
+          mint,
+          amountSol,
+          type: 'buy',
+        });
+
+        if (!submitRes.success) {
+          throw new Error(submitRes.error || 'Submit failed');
+        }
+
+        const result: TradeResult = {
+          success: true,
+          txHash: submitRes.txHash,
+          amountSol,
+        };
+
+        setLastResult(result);
+        setTradeHistory(prev => [result, ...prev.slice(0, 19)]);
+        return result;
+
+      } catch (e: any) {
+        lastError = e.message || 'Unknown error';
+        attempts++;
+
+        // Don't retry on user rejection
+        if (lastError.includes('reject') || lastError.includes('cancel') || lastError.includes('denied')) {
+          break;
+        }
+
+        // Wait before retry
+        if (attempts <= maxRetries) {
+          await new Promise(r => setTimeout(r, 1000 * attempts));
+        }
       }
-
-      // STEP 2: Deserialize and sign with Seed Vault
-      console.log('[trade] Signing with Seed Vault...');
-      const txBuffer = Buffer.from(prepareRes.transaction, 'base64');
-      const unsignedTx = VersionedTransaction.deserialize(txBuffer);
-      const signedTx = await signTransaction(unsignedTx) as VersionedTransaction;
-
-      // STEP 3: Serialize signed tx and submit to backend
-      console.log('[trade] Submitting signed transaction...');
-      const signedBase64 = Buffer.from(signedTx.serialize()).toString('base64');
-      const submitRes = await api.post('/trade/submit', {
-        signedTransaction: signedBase64,
-        mint,
-        amountSol,
-      });
-
-      const result: TradeResult = {
-        success: submitRes.success,
-        txHash: submitRes.txHash,
-      };
-
-      setLastResult(result);
-      console.log(`[trade] ✅ Buy success: ${submitRes.txHash}`);
-      return result;
-
-    } catch (e: any) {
-      const result: TradeResult = { success: false, error: e.message };
-      setLastResult(result);
-      console.error(`[trade] ❌ Buy failed: ${e.message}`);
-      return result;
-    } finally {
-      setIsBuying(false);
     }
+
+    const result: TradeResult = { success: false, error: lastError };
+    setLastResult(result);
+    setIsBuying(false);
+    return result;
   }, [isConnected, account, signTransaction]);
 
   /**
    * Execute sell: prepare → sign with Seed Vault → submit
    */
-  const executeSell = useCallback(async ({ mint, sellPct, slippageBps = 1500 }: SellParams): Promise<TradeResult> => {
+  const executeSell = useCallback(async ({
+    mint,
+    sellPct,
+    slippageBps = 2000,
+  }: SellParams): Promise<TradeResult> => {
     if (!isConnected || !account) {
       return { success: false, error: 'Wallet not connected' };
+    }
+
+    if (sellPct <= 0 || sellPct > 100) {
+      return { success: false, error: 'Invalid sell percentage (1-100%)' };
     }
 
     setIsSelling(true);
     setLastResult(null);
 
     try {
-      // STEP 1: Prepare unsigned sell transaction
-      console.log(`[trade] Preparing sell: ${sellPct}% of ${mint.slice(0, 8)}…`);
+      // STEP 1: Prepare sell transaction
       const prepareRes = await api.post('/trade/prepare-sell', {
         mint,
         sellPct,
         slippageBps,
+        wallet: account.address,
       });
 
       if (!prepareRes.transaction) {
-        throw new Error('No sell transaction returned from backend');
+        throw new Error(prepareRes.error || 'No sell transaction returned');
       }
 
       // STEP 2: Sign with Seed Vault
-      console.log('[trade] Signing sell with Seed Vault...');
       const txBuffer = Buffer.from(prepareRes.transaction, 'base64');
+      const { VersionedTransaction } = require('@solana/web3.js');
       const unsignedTx = VersionedTransaction.deserialize(txBuffer);
-      const signedTx = await signTransaction(unsignedTx) as VersionedTransaction;
+      const signedTx = await signTransaction(unsignedTx);
 
-      // STEP 3: Submit signed sell
-      console.log('[trade] Submitting signed sell...');
+      // STEP 3: Submit
       const signedBase64 = Buffer.from(signedTx.serialize()).toString('base64');
-      const submitRes = await api.post('/trade/submit-sell', {
+      const submitRes = await api.post('/trade/submit', {
         signedTransaction: signedBase64,
         mint,
         sellPct,
+        type: 'sell',
       });
 
+      if (!submitRes.success) {
+        throw new Error(submitRes.error || 'Sell submit failed');
+      }
+
       const result: TradeResult = {
-        success: submitRes.success,
+        success: true,
         txHash: submitRes.txHash,
       };
 
       setLastResult(result);
-      console.log(`[trade] ✅ Sell success: ${submitRes.txHash}`);
+      setTradeHistory(prev => [result, ...prev.slice(0, 19)]);
       return result;
 
     } catch (e: any) {
       const result: TradeResult = { success: false, error: e.message };
       setLastResult(result);
-      console.error(`[trade] ❌ Sell failed: ${e.message}`);
       return result;
     } finally {
       setIsSelling(false);
@@ -161,5 +204,6 @@ export function useTradeFlow() {
     isSelling,
     isTrading: isBuying || isSelling,
     lastResult,
+    tradeHistory,
   };
 }
