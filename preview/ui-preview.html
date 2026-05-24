@@ -3,274 +3,83 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SniperAI UI Preview</title>
+<title>SniperAI UI Preview - All Screens</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #0a0a0f; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif; display: flex; gap: 24px; padding: 32px; flex-wrap: wrap; justify-content: center; }
+body { background: #0a0a0f; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro', sans-serif; padding: 32px; }
+h1 { color: #8B5CF6; text-align: center; font-size: 24px; margin-bottom: 8px; }
+p.sub { color: #6B6B80; text-align: center; font-size: 13px; margin-bottom: 32px; }
+.row { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; margin-bottom: 40px; }
+.col { display: flex; flex-direction: column; align-items: center; }
 .phone { width: 375px; height: 812px; border-radius: 40px; overflow: hidden; border: 3px solid #2a2a3a; background: #0F0F14; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
-.screen-label { color: #8B5CF6; font-size: 11px; font-weight: 700; text-align: center; margin-top: 8px; letter-spacing: 1px; text-transform: uppercase; }
-.notch { width: 160px; height: 30px; background: #000; border-radius: 0 0 20px 20px; margin: 0 auto; }
+.screen-label { color: #8B5CF6; font-size: 11px; font-weight: 700; text-align: center; margin-top: 10px; letter-spacing: 1px; text-transform: uppercase; }
 </style>
 </head>
 <body>
-<div>
-<div class="phone" id="home"></div>
-<p class="screen-label">Discover Feed</p>
+<h1>SniperAI — UI Preview</h1>
+<p class="sub">Grey/Purple Theme · Phantom-style Buttons · Kiro-inspired Dark UI</p>
+<div class="row">
+<div class="col"><div class="phone" id="home"></div><p class="screen-label">1. Discover Feed</p></div>
+<div class="col"><div class="phone" id="portfolio"></div><p class="screen-label">2. Portfolio</p></div>
+<div class="col"><div class="phone" id="detail"></div><p class="screen-label">3. Token Detail</p></div>
 </div>
-<div>
-<div class="phone" id="portfolio"></div>
-<p class="screen-label">Portfolio</p>
+<div class="row">
+<div class="col"><div class="phone" id="aichat"></div><p class="screen-label">4. AI Chat</p></div>
+<div class="col"><div class="phone" id="settings"></div><p class="screen-label">5. Settings</p></div>
 </div>
-<div>
-<div class="phone" id="detail"></div>
-<p class="screen-label">Token Detail</p>
-</div>
-</div>
+<script>
+const C={bg1:'#0F0F14',bg2:'#1A1A24',bg3:'#24243A',purple:'#8B5CF6',purpleVib:'#7C3AED',
+textW:'#FFF',textSec:'#A0A0B8',textTert:'#6B6B80',textDis:'#454560',
+success:'#4ADE80',danger:'#F87171',warning:'#FBBF24',border:'rgba(255,255,255,0.06)'};
+
+
+function tabBar(a){const t=[{i:'◎',l:'Discover'},{i:'◈',l:'Portfolio'},{i:'◉',l:'AI'},{i:'◇',l:'Settings'}];
+return `<div style="position:absolute;bottom:0;left:0;right:0;height:70px;background:${C.bg1};border-top:1px solid ${C.border};display:flex;align-items:center;padding:8px 0">`+
+t.map((x,i)=>{const ac=i===a;const col=ac?C.purple:C.textTert;const bg=ac?'rgba(139,92,246,0.15)':'transparent';
+return `<div style="flex:1;text-align:center"><div style="width:30px;height:30px;border-radius:15px;background:${bg};display:inline-flex;align-items:center;justify-content:center"><span style="color:${col};font-size:16px">${x.i}</span></div><div style="color:${col};font-size:10px;font-weight:600;margin-top:2px">${x.l}</div></div>`;
+}).join('')+'</div>';}
+function metric(l,v){return `<div style="text-align:center;flex:1"><div style="color:${C.textTert};font-size:9px;text-transform:uppercase;letter-spacing:0.3px">${l}</div><div style="color:${C.textSec};font-size:12px;font-weight:600;margin-top:3px">${v}</div></div>`;}
+function tokenCard(s,n,sc,d,mc,vol,b,age){const col=sc>=70?C.purple:sc>=50?C.warning:C.danger;
+return `<div style="background:${C.bg2};border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid ${C.border}"><div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:12px"><div style="width:40px;height:40px;border-radius:20px;background:${C.bg3};display:flex;align-items:center;justify-content:center"><span style="color:${C.purple};font-size:16px;font-weight:700">${s[0]}</span></div><div><div style="color:${C.textW};font-size:15px;font-weight:700">${s}</div><div style="color:${C.textTert};font-size:11px;margin-top:1px">${n}</div></div></div><div style="text-align:center"><div style="width:40px;height:40px;border-radius:20px;border:2px solid ${col};background:${col}15;display:flex;align-items:center;justify-content:center"><span style="color:${col};font-size:13px;font-weight:800">${sc}</span></div><div style="color:${col};font-size:9px;font-weight:700;margin-top:3px">${d}</div></div></div><div style="display:flex;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid ${C.border}">${metric('MC',mc+' SOL')}${metric('Vol',vol)}${metric('Buys',b)}${metric('Age',age)}</div></div>`;}
+
+
+function homeScreen(){return `<div style="height:100%;display:flex;flex-direction:column;background:${C.bg1}"><div style="height:44px"></div><div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center"><span style="color:${C.textW};font-size:20px;font-weight:800">SniperAI</span></div><div style="padding:8px 20px;display:flex;justify-content:space-between;border-bottom:1px solid ${C.border}"><div style="display:flex;align-items:center;gap:6px"><div style="width:7px;height:7px;border-radius:4px;background:${C.success}"></div><span style="color:${C.textTert};font-size:11px">Live</span></div><span style="color:${C.textTert};font-size:11px">4 tokens</span></div><div style="padding:12px 20px;display:flex;gap:8px"><div style="padding:6px 16px;border-radius:99px;background:${C.purpleVib};color:#fff;font-size:12px;font-weight:600">All</div><div style="padding:6px 16px;border-radius:99px;background:${C.bg2};border:1px solid ${C.border};color:${C.textTert};font-size:12px;font-weight:600">Snipe</div><div style="padding:6px 16px;border-radius:99px;background:${C.bg2};border:1px solid ${C.border};color:${C.textTert};font-size:12px;font-weight:600">Watch</div></div><div style="flex:1;overflow-y:auto;padding:0 20px 80px">${tokenCard('PEPE2','Pepe 2.0',85,'SNIPE','18.5','6.3','28','2m')}${tokenCard('CHAD','GigaChad Token',72,'SNIPE','8.2','3.8','14','5m')}${tokenCard('MOON','Moon Shot',58,'WATCH','4.1','1.5','7','1m')}</div>${tabBar(0)}</div>`;}
+
+function posCard(s,e,m,p,pnl,profit){const col=profit?C.success:C.danger;const pW=Math.min(100,Math.max(10,(m/p)*100));
+return `<div style="background:${C.bg2};border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid ${C.border}"><div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:12px"><div style="width:36px;height:36px;border-radius:18px;background:${C.bg3};display:flex;align-items:center;justify-content:center"><span style="color:${C.purple};font-size:14px;font-weight:700">${s[0]}</span></div><div><div style="color:${C.textW};font-size:14px;font-weight:600">${s}</div><div style="color:${C.textTert};font-size:11px;margin-top:2px">${e}</div></div></div><div style="text-align:right"><div style="color:${col};font-size:20px;font-weight:800">${m.toFixed(2)}x</div><span style="background:${col}15;color:${col};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600">${profit?'+':''}${pnl}%</span></div></div><div style="margin-top:12px;display:flex;align-items:center;gap:8px"><div style="flex:1;height:3px;background:${C.bg3};border-radius:2px;overflow:hidden"><div style="width:${pW}%;height:100%;background:${col};border-radius:2px"></div></div><span style="color:${C.textDis};font-size:9px">Peak: ${p.toFixed(2)}x</span></div></div>`;}
+
+
+function portfolioScreen(){return `<div style="height:100%;display:flex;flex-direction:column;background:${C.bg1}"><div style="height:44px"></div><div style="padding:16px 20px"><span style="color:${C.textW};font-size:20px;font-weight:800">Portfolio</span></div><div style="margin:0 20px 16px;padding:20px;background:${C.bg2};border-radius:20px;border:1px solid ${C.border}"><div style="color:${C.textTert};font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Total Value</div><div style="color:${C.textW};font-size:26px;font-weight:800;font-family:monospace;margin-top:4px">1.450 SOL</div><div style="margin-top:8px"><span style="background:${C.success}20;color:${C.success};padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600">+0.450 SOL (+45.0%)</span></div><div style="display:flex;margin-top:20px;padding-top:16px;border-top:1px solid ${C.border}"><div style="flex:1;text-align:center"><div style="color:${C.textTert};font-size:9px;text-transform:uppercase">Positions</div><div style="color:${C.textW};font-size:13px;font-weight:600;margin-top:4px">2</div></div><div style="width:1px;background:${C.border}"></div><div style="flex:1;text-align:center"><div style="color:${C.textTert};font-size:9px;text-transform:uppercase">Invested</div><div style="color:${C.textW};font-size:13px;font-weight:600;margin-top:4px">1.00 SOL</div></div><div style="width:1px;background:${C.border}"></div><div style="flex:1;text-align:center"><div style="color:${C.textTert};font-size:9px;text-transform:uppercase">Win Rate</div><div style="color:${C.textW};font-size:13px;font-weight:600;margin-top:4px">50%</div></div></div></div><div style="padding:0 20px;display:flex;justify-content:space-between;margin-bottom:12px"><span style="color:${C.textW};font-size:15px;font-weight:600">Open Positions</span><span style="color:${C.textTert};font-size:12px;background:${C.bg2};padding:2px 8px;border-radius:99px">2</span></div><div style="flex:1;overflow-y:auto;padding:0 20px 80px">${posCard('PEPE2','0.50 SOL · 8m',2.1,2.3,110,true)}${posCard('CHAD','0.50 SOL · 22m',0.8,1.3,-20,false)}</div>${tabBar(1)}</div>`;}
+
+function dataRow(l,v){return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid ${C.border}"><span style="color:${C.textTert};font-size:11px">${l}</span><span style="color:${C.textW};font-size:12px;font-weight:600">${v}</span></div>`;}
+function reasonRow(t){return `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px"><div style="width:5px;height:5px;border-radius:3px;background:${C.purple};margin-top:5px;flex-shrink:0"></div><span style="color:${C.textSec};font-size:11px">${t}</span></div>`;}
+
+
+function detailScreen(){return `<div style="height:100%;display:flex;flex-direction:column;background:${C.bg1};overflow-y:auto"><div style="height:44px"></div><div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:12px"><div style="width:48px;height:48px;border-radius:24px;background:${C.bg3};display:flex;align-items:center;justify-content:center"><span style="color:${C.purple};font-size:20px;font-weight:700">P</span></div><div><div style="color:${C.textW};font-size:20px;font-weight:800">PEPE2</div><div style="color:${C.textTert};font-size:11px;margin-top:2px">Pepe 2.0</div></div></div><div style="text-align:center"><div style="width:52px;height:52px;border-radius:26px;border:2.5px solid ${C.purple};background:${C.purple}15;display:flex;align-items:center;justify-content:center"><span style="color:${C.purple};font-size:16px;font-weight:800">85</span></div><div style="color:${C.purple};font-size:9px;font-weight:700;margin-top:3px">SNIPE</div></div></div><div style="margin:0 20px 16px;background:${C.bg2};border-radius:16px;border:1px solid ${C.border};height:140px;display:flex;align-items:center;justify-content:center;flex-direction:column"><div style="color:${C.textTert};font-size:12px;font-weight:600;margin-bottom:12px">Price Chart</div><div style="width:70%;height:2px;background:${C.purple};opacity:0.3;border-radius:1px"></div><div style="color:${C.textDis};font-size:9px;margin-top:12px">Real-time data loading...</div></div><div style="margin:0 20px 12px;padding:16px;background:${C.bg2};border-radius:16px;border:1px solid ${C.border}"><div style="color:${C.purple};font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Market Data</div>${dataRow('Market Cap','18.50 SOL')}${dataRow('Bonding Curve','22.5%')}${dataRow('Volume (5m)','6.30 SOL')}${dataRow('Buy Count (5m)','28')}${dataRow('Unique Buyers','15')}</div><div style="margin:0 20px 12px;padding:16px;background:${C.bg2};border-radius:16px;border:1px solid ${C.border}"><div style="color:${C.purple};font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">AI Analysis</div>${reasonRow('Strong buy pressure: 82%')}${reasonRow('Diverse buyers: 15 unique wallets')}${reasonRow('Bonding curve: 22% (sweet spot)')}${reasonRow('No bundling detected')}</div><div style="padding:0 20px 24px;display:flex;gap:12px"><div style="flex:1;padding:14px;border-radius:12px;background:${C.success};text-align:center"><span style="color:${C.bg1};font-size:14px;font-weight:700">Buy 0.5 SOL</span></div><div style="flex:1;padding:14px;border-radius:12px;background:${C.danger};text-align:center"><span style="color:#fff;font-size:14px;font-weight:700">Sell All</span></div></div></div>`;}
+
+
+function aiChatScreen(){return `<div style="height:100%;display:flex;flex-direction:column;background:${C.bg1}"><div style="height:44px"></div><div style="padding:16px 20px;border-bottom:1px solid ${C.border}"><span style="color:${C.textW};font-size:18px;font-weight:700">AI</span></div><div style="flex:1;overflow-y:auto;padding:16px 20px 80px">
+<div style="display:flex;align-items:flex-end;margin-bottom:14px;max-width:85%"><div style="width:28px;height:28px;border-radius:14px;background:${C.purpleVib};display:flex;align-items:center;justify-content:center;margin-right:8px;flex-shrink:0"><span style="color:#fff;font-size:13px">◉</span></div><div style="background:${C.bg2};border:1px solid ${C.border};border-radius:20px;border-bottom-left-radius:6px;padding:12px 14px"><span style="color:${C.textSec};font-size:13px;line-height:1.5">Hey! I'm your AI trading copilot.<br><br>I can help you with:<br>• Finding high-score tokens<br>• Explaining token analysis<br>• Trading strategies<br>• Market insights</span></div></div>
+<div style="display:flex;justify-content:flex-end;margin-bottom:14px"><div style="background:${C.purpleVib};border-radius:20px;border-bottom-right-radius:6px;padding:12px 14px;max-width:75%"><span style="color:#fff;font-size:13px">What is bundling?</span></div></div>
+<div style="display:flex;align-items:flex-end;margin-bottom:14px;max-width:85%"><div style="width:28px;height:28px;border-radius:14px;background:${C.purpleVib};display:flex;align-items:center;justify-content:center;margin-right:8px;flex-shrink:0"><span style="color:#fff;font-size:13px">◉</span></div><div style="background:${C.bg2};border:1px solid ${C.border};border-radius:20px;border-bottom-left-radius:6px;padding:12px 14px"><span style="color:${C.textSec};font-size:13px;line-height:1.5">Bundling is when a deployer uses multiple wallets to buy their own token at launch. SniperAI detects 3+ wallets buying simultaneously and auto-skips.</span></div></div>
+<div style="display:flex;justify-content:flex-end;margin-bottom:14px"><div style="background:${C.purpleVib};border-radius:20px;border-bottom-right-radius:6px;padding:12px 14px;max-width:75%"><span style="color:#fff;font-size:13px">Show trending tokens</span></div></div>
+<div style="display:flex;align-items:flex-end;margin-bottom:14px;max-width:85%"><div style="width:28px;height:28px;border-radius:14px;background:${C.purpleVib};display:flex;align-items:center;justify-content:center;margin-right:8px;flex-shrink:0"><span style="color:#fff;font-size:13px">◉</span></div><div style="background:${C.bg2};border:1px solid ${C.border};border-radius:20px;border-bottom-left-radius:6px;padding:12px 14px"><span style="color:${C.textSec};font-size:13px;line-height:1.4">Here are top tokens right now:</span><div style="background:${C.bg3};border-radius:10px;padding:10px 12px;margin-top:8px;display:flex;justify-content:space-between;align-items:center"><span style="color:${C.textW};font-size:12px;font-weight:600">PEPE2</span><span style="background:${C.purple}30;color:${C.purple};padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600">85</span></div><div style="background:${C.bg3};border-radius:10px;padding:10px 12px;margin-top:6px;display:flex;justify-content:space-between;align-items:center"><span style="color:${C.textW};font-size:12px;font-weight:600">CHAD</span><span style="background:${C.purple}30;color:${C.purple};padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600">72</span></div></div></div>
+</div><div style="padding:10px 12px;border-top:1px solid ${C.border};display:flex;align-items:flex-end;gap:8px"><div style="flex:1;background:${C.bg2};border:1px solid ${C.border};border-radius:20px;padding:10px 16px"><span style="color:${C.textDis};font-size:13px">Ask anything about tokens...</span></div><div style="width:38px;height:38px;border-radius:19px;background:${C.purpleVib};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(139,92,246,0.3)"><span style="color:#fff;font-size:16px;font-weight:800">↑</span></div></div>${tabBar(2)}</div>`;}
+
+
+function settingsScreen(){return `<div style="height:100%;display:flex;flex-direction:column;background:${C.bg1}"><div style="height:44px"></div><div style="padding:16px 20px;border-bottom:1px solid ${C.border}"><span style="color:${C.textW};font-size:18px;font-weight:700">Settings</span></div><div style="flex:1;overflow-y:auto;padding:16px">
+<div style="background:${C.bg2};border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid ${C.border}"><div style="color:${C.purple};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px">Wallet</div><div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="width:40px;height:40px;border-radius:20px;background:${C.bg3};display:flex;align-items:center;justify-content:center"><span style="color:${C.purple};font-size:16px">◈</span></div><div><div style="color:${C.textW};font-size:13px;font-weight:600;font-family:monospace">7xK9...mP4z</div><div style="color:${C.success};font-size:9px;font-weight:500;margin-top:2px">Connected via Seed Vault</div></div></div><div style="background:${C.purple}15;border:1px solid ${C.purple}50;border-radius:99px;padding:4px 12px;display:inline-block;margin-bottom:12px"><span style="color:#A66DFF;font-size:10px;font-weight:600">✦ Seeker Genesis Holder · 50% Off</span></div><div style="text-align:center;padding:8px;border-radius:10px"><span style="color:${C.purple};font-size:13px;font-weight:600">Disconnect</span></div></div>
+<div style="background:${C.bg2};border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid ${C.border}"><div style="color:${C.purple};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px">SKR Rewards</div><div style="display:flex;justify-content:space-between;align-items:center"><div><div style="color:${C.textW};font-size:24px;font-weight:800;font-family:monospace">125.0</div><div style="color:${C.textTert};font-size:9px;margin-top:2px">SKR Balance</div></div><div style="border:1.5px solid ${C.purple};border-radius:10px;padding:8px 14px"><span style="color:${C.purple};font-size:12px;font-weight:700">Claim Daily</span></div></div></div>
+<div style="background:${C.bg2};border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid ${C.border}"><div style="color:${C.purple};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px">Notifications</div><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid ${C.border}"><div><div style="color:${C.textW};font-size:13px;font-weight:500">Push Alerts</div><div style="color:${C.textTert};font-size:9px;margin-top:2px">Get notified on high-score tokens</div></div><div style="width:42px;height:24px;border-radius:12px;background:${C.purpleVib};position:relative"><div style="width:18px;height:18px;border-radius:9px;background:#fff;position:absolute;right:3px;top:3px"></div></div></div>${dataRow('Min Score for Alert','75')}${dataRow('Alert on Rug','On')}${dataRow('Alert on TP','On')}</div>
+<div style="background:${C.bg2};border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid ${C.border}"><div style="color:${C.purple};font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px">Risk Management</div><div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid ${C.border}"><div><div style="color:${C.textW};font-size:13px;font-weight:500">Auto-Trade</div><div style="color:${C.textTert};font-size:9px;margin-top:2px">Auto execute on high scores</div></div><div style="width:42px;height:24px;border-radius:12px;background:${C.bg3};position:relative"><div style="width:18px;height:18px;border-radius:9px;background:${C.textTert};position:absolute;left:3px;top:3px"></div></div></div>${dataRow('Buy Amount','0.5 SOL')}${dataRow('Max Positions','3')}${dataRow('Stop Loss','-40%')}${dataRow('Trailing Stop','25%')}${dataRow('Take Profit','50%')}</div>
+</div>${tabBar(3)}</div>`;}
+
+
+document.getElementById('home').innerHTML=homeScreen();
+document.getElementById('portfolio').innerHTML=portfolioScreen();
+document.getElementById('detail').innerHTML=detailScreen();
+document.getElementById('aichat').innerHTML=aiChatScreen();
+document.getElementById('settings').innerHTML=settingsScreen();
+</script>
 </body>
 </html>
-
-
-<script>
-// Colors from theme
-const C = {
-  bg1: '#0F0F14', bg2: '#1A1A24', bg3: '#24243A',
-  purple: '#8B5CF6', purpleVib: '#7C3AED', purpleDeep: '#6D28D9',
-  textW: '#FFFFFF', textSec: '#A0A0B8', textTert: '#6B6B80', textDis: '#454560',
-  success: '#4ADE80', danger: '#F87171', warning: '#FBBF24',
-  border: 'rgba(255,255,255,0.06)', borderDef: 'rgba(255,255,255,0.1)',
-};
-
-function homeScreen() {
-  return `
-  <div style="height:100%;display:flex;flex-direction:column;background:${C.bg1}">
-    <div style="height:44px"></div>
-    <!-- Header -->
-    <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
-      <span style="color:${C.textW};font-size:20px;font-weight:800">SniperAI</span>
-      <span style="color:${C.textTert};font-size:11px">◎</span>
-    </div>
-    <!-- Status -->
-    <div style="padding:8px 20px;display:flex;justify-content:space-between;border-bottom:1px solid ${C.border}">
-      <div style="display:flex;align-items:center;gap:6px">
-        <div style="width:7px;height:7px;border-radius:4px;background:${C.success}"></div>
-        <span style="color:${C.textTert};font-size:11px">Live</span>
-      </div>
-      <span style="color:${C.textTert};font-size:11px">4 tokens</span>
-    </div>
-    <!-- Filters -->
-    <div style="padding:12px 20px;display:flex;gap:8px">
-      <div style="padding:6px 16px;border-radius:99px;background:${C.purpleVib};color:#fff;font-size:12px;font-weight:600">All</div>
-      <div style="padding:6px 16px;border-radius:99px;background:${C.bg2};border:1px solid ${C.border};color:${C.textTert};font-size:12px;font-weight:600">Snipe</div>
-      <div style="padding:6px 16px;border-radius:99px;background:${C.bg2};border:1px solid ${C.border};color:${C.textTert};font-size:12px;font-weight:600">Watch</div>
-    </div>
-    <!-- Token Cards -->
-    <div style="flex:1;overflow-y:auto;padding:0 20px 80px">
-      ${tokenCard('PEPE2','Pepe 2.0',85,'SNIPE','18.5','6.3','28','2m')}
-      ${tokenCard('CHAD','GigaChad Token',72,'SNIPE','8.2','3.8','14','5m')}
-      ${tokenCard('MOON','Moon Shot',58,'WATCH','4.1','1.5','7','1m')}
-    </div>
-    <!-- Tab Bar -->
-    ${tabBar(0)}
-  </div>`;
-}
-
-function tokenCard(sym,name,score,decision,mc,vol,buys,age) {
-  const scoreCol = score >= 70 ? C.purple : score >= 50 ? C.warning : C.danger;
-  return `
-  <div style="background:${C.bg2};border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid ${C.border}">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:40px;height:40px;border-radius:20px;background:${C.bg3};display:flex;align-items:center;justify-content:center">
-          <span style="color:${C.purple};font-size:16px;font-weight:700">${sym[0]}</span>
-        </div>
-        <div>
-          <div style="color:${C.textW};font-size:15px;font-weight:700">${sym}</div>
-          <div style="color:${C.textTert};font-size:11px;margin-top:1px">${name}</div>
-        </div>
-      </div>
-      <div style="text-align:center">
-        <div style="width:40px;height:40px;border-radius:20px;border:2px solid ${scoreCol};background:${scoreCol}15;display:flex;align-items:center;justify-content:center">
-          <span style="color:${scoreCol};font-size:13px;font-weight:800">${score}</span>
-        </div>
-        <div style="color:${scoreCol};font-size:9px;font-weight:700;margin-top:3px;letter-spacing:0.3px">${decision}</div>
-      </div>
-    </div>
-    <div style="display:flex;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid ${C.border}">
-      ${metric('MC',mc+' SOL')}${metric('Vol',vol)}${metric('Buys',buys)}${metric('Age',age)}
-    </div>
-  </div>`;
-}
-
-function metric(label,value) {
-  return `<div style="text-align:center;flex:1">
-    <div style="color:${C.textTert};font-size:9px;text-transform:uppercase;letter-spacing:0.3px">${label}</div>
-    <div style="color:${C.textSec};font-size:12px;font-weight:600;margin-top:3px">${value}</div>
-  </div>`;
-}
-
-function tabBar(active) {
-  const tabs = [{icon:'◎',label:'Discover'},{icon:'◈',label:'Portfolio'},{icon:'◉',label:'AI'},{icon:'◇',label:'Settings'}];
-  const items = tabs.map((t,i) => {
-    const isActive = i === active;
-    const col = isActive ? C.purple : C.textTert;
-    const bgIcon = isActive ? 'rgba(139,92,246,0.15)' : 'transparent';
-    return `<div style="flex:1;text-align:center">
-      <div style="width:30px;height:30px;border-radius:15px;background:${bgIcon};display:inline-flex;align-items:center;justify-content:center">
-        <span style="color:${col};font-size:16px">${t.icon}</span>
-      </div>
-      <div style="color:${col};font-size:10px;font-weight:600;margin-top:2px">${t.label}</div>
-    </div>`;
-  }).join('');
-  return `<div style="position:absolute;bottom:0;left:0;right:0;height:70px;background:${C.bg1};border-top:1px solid ${C.border};display:flex;align-items:center;padding:8px 0">${items}</div>`;
-}
-
-function portfolioScreen() {
-  return `
-  <div style="height:100%;display:flex;flex-direction:column;background:${C.bg1}">
-    <div style="height:44px"></div>
-    <div style="padding:16px 20px">
-      <span style="color:${C.textW};font-size:20px;font-weight:800">Portfolio</span>
-    </div>
-    <!-- Summary Card -->
-    <div style="margin:0 20px 16px;padding:20px;background:${C.bg2};border-radius:20px;border:1px solid ${C.border}">
-      <div style="color:${C.textTert};font-size:10px;text-transform:uppercase;letter-spacing:0.5px">Total Value</div>
-      <div style="color:${C.textW};font-size:26px;font-weight:800;font-family:monospace;margin-top:4px">1.450 SOL</div>
-      <div style="margin-top:8px">
-        <span style="background:${C.success}20;color:${C.success};padding:4px 12px;border-radius:99px;font-size:12px;font-weight:600">+0.450 SOL (+45.0%)</span>
-      </div>
-      <div style="display:flex;margin-top:20px;padding-top:16px;border-top:1px solid ${C.border}">
-        <div style="flex:1;text-align:center">
-          <div style="color:${C.textTert};font-size:9px;text-transform:uppercase">Positions</div>
-          <div style="color:${C.textW};font-size:13px;font-weight:600;margin-top:4px">2</div>
-        </div>
-        <div style="width:1px;background:${C.border}"></div>
-        <div style="flex:1;text-align:center">
-          <div style="color:${C.textTert};font-size:9px;text-transform:uppercase">Invested</div>
-          <div style="color:${C.textW};font-size:13px;font-weight:600;margin-top:4px">1.00 SOL</div>
-        </div>
-        <div style="width:1px;background:${C.border}"></div>
-        <div style="flex:1;text-align:center">
-          <div style="color:${C.textTert};font-size:9px;text-transform:uppercase">Win Rate</div>
-          <div style="color:${C.textW};font-size:13px;font-weight:600;margin-top:4px">50%</div>
-        </div>
-      </div>
-    </div>
-    <!-- Section -->
-    <div style="padding:0 20px;display:flex;justify-content:space-between;margin-bottom:12px">
-      <span style="color:${C.textW};font-size:15px;font-weight:600">Open Positions</span>
-      <span style="color:${C.textTert};font-size:12px;background:${C.bg2};padding:2px 8px;border-radius:99px">2</span>
-    </div>
-    <!-- Positions -->
-    <div style="flex:1;overflow-y:auto;padding:0 20px 80px">
-      ${positionCard('PEPE2','0.50 SOL · 8m',2.1,2.3,110,true)}
-      ${positionCard('CHAD','0.50 SOL · 22m',0.8,1.3,-20,false)}
-    </div>
-    ${tabBar(1)}
-  </div>`;
-}
-
-function positionCard(sym,entry,mult,peak,pnl,profit) {
-  const col = profit ? C.success : C.danger;
-  const pctW = Math.min(100, Math.max(10, (mult/peak)*100));
-  return `
-  <div style="background:${C.bg2};border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid ${C.border}">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:36px;height:36px;border-radius:18px;background:${C.bg3};display:flex;align-items:center;justify-content:center">
-          <span style="color:${C.purple};font-size:14px;font-weight:700">${sym[0]}</span>
-        </div>
-        <div>
-          <div style="color:${C.textW};font-size:14px;font-weight:600">${sym}</div>
-          <div style="color:${C.textTert};font-size:11px;margin-top:2px">${entry}</div>
-        </div>
-      </div>
-      <div style="text-align:right">
-        <div style="color:${col};font-size:20px;font-weight:800">${mult.toFixed(2)}x</div>
-        <span style="background:${col}15;color:${col};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600">${profit?'+':''}${pnl}%</span>
-      </div>
-    </div>
-    <div style="margin-top:12px;display:flex;align-items:center;gap:8px">
-      <div style="flex:1;height:3px;background:${C.bg3};border-radius:2px;overflow:hidden">
-        <div style="width:${pctW}%;height:100%;background:${col};border-radius:2px"></div>
-      </div>
-      <span style="color:${C.textDis};font-size:9px">Peak: ${peak.toFixed(2)}x</span>
-    </div>
-  </div>`;
-}
-
-function detailScreen() {
-  return `
-  <div style="height:100%;display:flex;flex-direction:column;background:${C.bg1};overflow-y:auto">
-    <div style="height:44px"></div>
-    <!-- Header -->
-    <div style="padding:16px 20px;display:flex;justify-content:space-between;align-items:center">
-      <div style="display:flex;align-items:center;gap:12px">
-        <div style="width:48px;height:48px;border-radius:24px;background:${C.bg3};display:flex;align-items:center;justify-content:center">
-          <span style="color:${C.purple};font-size:20px;font-weight:700">P</span>
-        </div>
-        <div>
-          <div style="color:${C.textW};font-size:20px;font-weight:800">PEPE2</div>
-          <div style="color:${C.textTert};font-size:11px;margin-top:2px">Pepe 2.0</div>
-        </div>
-      </div>
-      <div style="text-align:center">
-        <div style="width:52px;height:52px;border-radius:26px;border:2.5px solid ${C.purple};background:${C.purple}15;display:flex;align-items:center;justify-content:center">
-          <span style="color:${C.purple};font-size:16px;font-weight:800">85</span>
-        </div>
-        <div style="color:${C.purple};font-size:9px;font-weight:700;margin-top:3px">SNIPE</div>
-      </div>
-    </div>
-    <!-- Chart -->
-    <div style="margin:0 20px 16px;background:${C.bg2};border-radius:16px;border:1px solid ${C.border};height:140px;display:flex;align-items:center;justify-content:center;flex-direction:column">
-      <div style="color:${C.textTert};font-size:12px;font-weight:600;margin-bottom:12px">Price Chart</div>
-      <div style="width:70%;height:2px;background:${C.purple};opacity:0.3;border-radius:1px"></div>
-      <div style="color:${C.textDis};font-size:9px;margin-top:12px">Real-time data loading...</div>
-    </div>
-    <!-- Market Data -->
-    <div style="margin:0 20px 12px;padding:16px;background:${C.bg2};border-radius:16px;border:1px solid ${C.border}">
-      <div style="color:${C.purple};font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">Market Data</div>
-      ${dataRow('Market Cap','18.50 SOL')}
-      ${dataRow('Bonding Curve','22.5%')}
-      ${dataRow('Volume (5m)','6.30 SOL')}
-      ${dataRow('Buy Count (5m)','28')}
-      ${dataRow('Unique Buyers','15')}
-    </div>
-    <!-- AI Analysis -->
-    <div style="margin:0 20px 12px;padding:16px;background:${C.bg2};border-radius:16px;border:1px solid ${C.border}">
-      <div style="color:${C.purple};font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px">AI Analysis</div>
-      ${reasonRow('Strong buy pressure: 82%')}
-      ${reasonRow('Diverse buyers: 15 unique wallets')}
-      ${reasonRow('Bonding curve: 22% (sweet spot)')}
-      ${reasonRow('No bundling detected')}
-    </div>
-    <!-- Trade Buttons -->
-    <div style="padding:0 20px 24px;display:flex;gap:12px">
-      <div style="flex:1;padding:14px;border-radius:12px;background:${C.success};text-align:center">
-        <span style="color:${C.bg1};font-size:14px;font-weight:700">Buy 0.5 SOL</span>
-      </div>
-      <div style="flex:1;padding:14px;border-radius:12px;background:${C.danger};text-align:center">
-        <span style="color:#fff;font-size:14px;font-weight:700">Sell All</span>
-      </div>
-    </div>
-  </div>`;
-}
-
-function dataRow(label,value) {
-  return `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid ${C.border}">
-    <span style="color:${C.textTert};font-size:11px">${label}</span>
-    <span style="color:${C.textW};font-size:12px;font-weight:600">${value}</span>
-  </div>`;
-}
-
-function reasonRow(text) {
-  return `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px">
-    <div style="width:5px;height:5px;border-radius:3px;background:${C.purple};margin-top:5px;flex-shrink:0"></div>
-    <span style="color:${C.textSec};font-size:11px">${text}</span>
-  </div>`;
-}
-
-// Render all screens
-document.getElementById('home').innerHTML = homeScreen();
-document.getElementById('portfolio').innerHTML = portfolioScreen();
-document.getElementById('detail').innerHTML = detailScreen();
-</script>
