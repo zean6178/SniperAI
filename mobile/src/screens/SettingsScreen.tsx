@@ -8,12 +8,14 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
 import { useWallet } from '../hooks/useWallet';
+import { useTheme } from '../providers/ThemeProvider';
 import TradeButton from '../components/TradeButton';
 import { colors, spacing, radius, typography, shadows } from '../theme';
 import { getSKRBalance, claimDailyReward, checkGenesisToken } from '../services/skr';
 
 export default function SettingsScreen() {
   const { wallet, isConnected, isConnecting, connect, disconnect } = useWallet();
+  const { isDark, toggleTheme, colors: themeColors } = useTheme();
   const [skrBalance, setSkrBalance] = useState(0);
   const [hasGenesis, setHasGenesis] = useState(false);
   const [alertsEnabled, setAlertsEnabled] = useState(true);
@@ -92,6 +94,17 @@ export default function SettingsScreen() {
             fullWidth={false}
           />
         </View>
+      </View>
+
+      {/* Appearance */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Appearance</Text>
+        <SettingToggle
+          label="Dark Mode"
+          description={isDark ? 'Grey/Purple dark theme active' : 'Light theme with purple accents'}
+          value={isDark}
+          onToggle={toggleTheme}
+        />
       </View>
 
       {/* Notifications */}

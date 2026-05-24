@@ -13,6 +13,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, Text, StyleSheet } from 'react-native';
 
 import { WalletProvider } from './providers/WalletProvider';
+import { ThemeProvider, useTheme } from './providers/ThemeProvider';
 import HomeScreen from './screens/HomeScreen';
 import TokenDetailScreen from './screens/TokenDetailScreen';
 import PortfolioScreen from './screens/PortfolioScreen';
@@ -25,6 +26,7 @@ const Stack = createNativeStackNavigator();
 
 // Custom tab bar icons — clean minimalist style
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
+  const { colors: c } = useTheme();
   const icons: Record<string, string> = {
     Feed: '◎',
     Portfolio: '◈',
@@ -32,8 +34,8 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
     Settings: '◇',
   };
   return (
-    <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
-      <Text style={[styles.tabIconText, focused && styles.tabIconTextActive]}>
+    <View style={[styles.tabIcon, focused && { backgroundColor: `${c.purple[400]}20` }]}>
+      <Text style={[styles.tabIconText, { color: focused ? c.purple[400] : c.text.tertiary }]}>
         {icons[name] || '○'}
       </Text>
     </View>
@@ -41,10 +43,11 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
 }
 
 function HomeTabs() {
+  const { tabBarTheme: tbTheme } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        ...tabBarTheme,
+        ...tbTheme,
         tabBarIcon: ({ focused }) => <TabIcon name={route.name} focused={focused} />,
       })}
     >
@@ -72,25 +75,34 @@ function HomeTabs() {
   );
 }
 
+function AppContent() {
+  const { navigationTheme: navTheme, stackTheme: sTheme } = useTheme();
+  return (
+    <NavigationContainer theme={navTheme}>
+      <StatusBar style="auto" />
+      <Stack.Navigator screenOptions={sTheme}>
+        <Stack.Screen
+          name="Main"
+          component={HomeTabs}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="TokenDetail"
+          component={TokenDetailScreen}
+          options={{ title: 'Token' }}
+        />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
 export default function App() {
   return (
-    <WalletProvider>
-      <NavigationContainer theme={navigationTheme}>
-        <StatusBar style="light" />
-        <Stack.Navigator screenOptions={stackTheme}>
-          <Stack.Screen
-            name="Main"
-            component={HomeTabs}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="TokenDetail"
-            component={TokenDetailScreen}
-            options={{ title: 'Token' }}
-          />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </WalletProvider>
+    <ThemeProvider>
+      <WalletProvider>
+        <AppContent />
+      </WalletProvider>
+    </ThemeProvider>
   );
 }
 
@@ -102,14 +114,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tabIconActive: {
-    backgroundColor: 'rgba(139, 92, 246, 0.15)',
-  },
   tabIconText: {
     fontSize: 18,
-    color: colors.text.tertiary,
-  },
-  tabIconTextActive: {
-    color: colors.purple[400],
   },
 });
