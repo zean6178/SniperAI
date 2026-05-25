@@ -1,29 +1,100 @@
 /**
- * HomeScreen — Real-time token discovery feed
+ * HomeScreen — Futuristic landing with Black Hole hero + Token Discovery Feed
  * 
- * Clean, minimal layout with purple accent filters.
- * Phantom-wallet-inspired: smooth scrolling, subtle cards, elegant spacing.
+ * Electric Cyan style: black hole animation center, large "Sniper" title,
+ * primary CTA gradient button, secondary wallet button, bottom navigation.
+ * Sci-fi operating system feel with neon cyan glow.
  */
 
 import React, { useState } from 'react';
 import {
   View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity,
+  Animated, Dimensions,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import TokenCard from '../components/TokenCard';
 import { useTokenFeed } from '../hooks/useTokenFeed';
-import { colors, spacing, radius, typography } from '../theme';
+import { colors, spacing, radius, typography, shadows, glass } from '../theme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 type FilterType = 'all' | 'snipe' | 'watch';
 
 export default function HomeScreen({ navigation }: any) {
   const { tokens, isLoading, refresh, isConnected } = useTokenFeed({ minScore: 50 });
   const [filter, setFilter] = useState<FilterType>('all');
+  const [showHero, setShowHero] = useState(true);
 
   const filteredTokens = tokens.filter(t => {
     if (filter === 'snipe') return t.decision === 'SNIPE';
     if (filter === 'watch') return t.decision === 'WATCH';
     return true;
   });
+
+  const HeroSection = () => (
+    <View style={styles.heroContainer}>
+      {/* Black Hole Visual */}
+      <View style={styles.blackHoleContainer}>
+        {/* Outer orbit rings */}
+        <View style={[styles.orbitRing, styles.orbitRing3]} />
+        <View style={[styles.orbitRing, styles.orbitRing2]} />
+        <View style={[styles.orbitRing, styles.orbitRing1]} />
+        
+        {/* Core glow */}
+        <View style={styles.blackHoleCore}>
+          <View style={styles.blackHoleInner}>
+            <View style={styles.blackHoleDot} />
+          </View>
+        </View>
+
+        {/* Particle dots */}
+        <View style={[styles.particle, { top: 30, left: 60 }]} />
+        <View style={[styles.particle, { top: 45, right: 50 }]} />
+        <View style={[styles.particle, { bottom: 40, left: 45 }]} />
+        <View style={[styles.particle, { bottom: 25, right: 65 }]} />
+        <View style={[styles.particleSm, { top: 20, right: 80 }]} />
+        <View style={[styles.particleSm, { bottom: 55, left: 80 }]} />
+      </View>
+
+      {/* Title */}
+      <Text style={styles.heroTitle}>Sniper</Text>
+      <Text style={styles.heroSubtitle}>AI-Powered Token Intelligence</Text>
+
+      {/* Primary CTA Button */}
+      <TouchableOpacity
+        style={styles.ctaButton}
+        onPress={() => setShowHero(false)}
+        activeOpacity={0.85}
+      >
+        <LinearGradient
+          colors={['#0066FF', '#00E5FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.ctaGradient}
+        >
+          <Text style={styles.ctaText}>⚡ Start Sniping</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {/* Secondary Wallet Button */}
+      <TouchableOpacity
+        style={styles.walletButton}
+        onPress={() => navigation.navigate('Settings')}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.walletButtonIcon}>◈</Text>
+        <Text style={styles.walletButtonText}>Connect Wallet</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  if (showHero && tokens.length === 0) {
+    return (
+      <View style={styles.container}>
+        <HeroSection />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -32,20 +103,20 @@ export default function HomeScreen({ navigation }: any) {
         <View style={styles.statusLeft}>
           <View style={[styles.dot, { backgroundColor: isConnected ? colors.success : colors.danger }]} />
           <Text style={styles.statusText}>
-            {isConnected ? 'Live' : 'Offline'}
+            {isConnected ? 'Live Feed' : 'Offline'}
           </Text>
         </View>
-        <Text style={styles.countText}>
-          {tokens.length} tokens
-        </Text>
+        <View style={styles.statusRight}>
+          <Text style={styles.countText}>{tokens.length} tokens</Text>
+        </View>
       </View>
 
       {/* Filter chips */}
       <View style={styles.filterRow}>
         {([
-          { key: 'all', label: 'All' },
-          { key: 'snipe', label: 'Snipe' },
-          { key: 'watch', label: 'Watch' },
+          { key: 'all', label: '◎ All' },
+          { key: 'snipe', label: '⚡ Snipe' },
+          { key: 'watch', label: '◉ Watch' },
         ] as const).map(({ key, label }) => (
           <TouchableOpacity
             key={key}
@@ -53,9 +124,18 @@ export default function HomeScreen({ navigation }: any) {
             onPress={() => setFilter(key)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.filterText, filter === key && styles.filterTextActive]}>
-              {label}
-            </Text>
+            {filter === key ? (
+              <LinearGradient
+                colors={['#0066FF', '#00E5FF']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.filterChipGradient}
+              >
+                <Text style={styles.filterTextActive}>{label}</Text>
+              </LinearGradient>
+            ) : (
+              <Text style={styles.filterText}>{label}</Text>
+            )}
           </TouchableOpacity>
         ))}
       </View>
@@ -74,18 +154,20 @@ export default function HomeScreen({ navigation }: any) {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={refresh}
-            tintColor={colors.purple[400]}
-            colors={[colors.purple[400]]}
+            tintColor={colors.cyan[400]}
+            colors={[colors.cyan[400]]}
           />
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>◎</Text>
+            <View style={styles.emptyIconContainer}>
+              <Text style={styles.emptyIcon}>◎</Text>
+            </View>
             <Text style={styles.emptyTitle}>
-              {isLoading ? 'Scanning...' : 'No tokens found'}
+              {isLoading ? 'Scanning Blockchain...' : 'No tokens found'}
             </Text>
             <Text style={styles.emptySubtext}>
-              {isLoading ? 'Looking for opportunities' : 'Try adjusting your filters'}
+              {isLoading ? 'AI is analyzing new launches' : 'Try adjusting your filters'}
             </Text>
           </View>
         }
@@ -101,6 +183,134 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg.primary,
   },
+
+  // ═══════════ HERO SECTION ═══════════
+  heroContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xxxl,
+  },
+  blackHoleContainer: {
+    width: 200,
+    height: 200,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.xxxl,
+  },
+  orbitRing: {
+    position: 'absolute',
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  orbitRing1: {
+    width: 100,
+    height: 100,
+    borderColor: 'rgba(0, 229, 255, 0.4)',
+  },
+  orbitRing2: {
+    width: 150,
+    height: 150,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
+  },
+  orbitRing3: {
+    width: 200,
+    height: 200,
+    borderColor: 'rgba(0, 102, 255, 0.12)',
+  },
+  blackHoleCore: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(0, 229, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.cyanStrong,
+  },
+  blackHoleInner: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 102, 255, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blackHoleDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.cyan[400],
+    ...shadows.cyan,
+  },
+  particle: {
+    position: 'absolute',
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.cyan[400],
+    opacity: 0.8,
+  },
+  particleSm: {
+    position: 'absolute',
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: colors.cyan[400],
+    opacity: 0.5,
+  },
+  heroTitle: {
+    ...typography.hero,
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  heroSubtitle: {
+    ...typography.heroSub,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    marginBottom: spacing.section,
+  },
+  ctaButton: {
+    width: '100%',
+    maxWidth: 280,
+    borderRadius: radius.full,
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
+    ...shadows.cyan,
+  },
+  ctaGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: radius.full,
+  },
+  ctaText: {
+    ...typography.button,
+    color: colors.white,
+    fontWeight: '700',
+  },
+  walletButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(10, 26, 46, 0.8)',
+    borderWidth: 1,
+    borderColor: colors.border.strong,
+  },
+  walletButtonIcon: {
+    fontSize: 16,
+    color: colors.cyan[400],
+    marginRight: spacing.sm,
+  },
+  walletButtonText: {
+    ...typography.buttonSm,
+    color: colors.cyan[400],
+  },
+
+  // ═══════════ FEED SECTION ═══════════
   statusBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -111,6 +321,10 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border.subtle,
   },
   statusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  statusRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -126,7 +340,8 @@ const styles = StyleSheet.create({
   },
   countText: {
     ...typography.bodySm,
-    color: colors.text.tertiary,
+    color: colors.cyan[400],
+    opacity: 0.7,
   },
   filterRow: {
     flexDirection: 'row',
@@ -135,22 +350,29 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   filterChip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
     borderRadius: radius.full,
     backgroundColor: colors.bg.secondary,
     borderWidth: 1,
     borderColor: colors.border.subtle,
+    overflow: 'hidden',
   },
   filterChipActive: {
-    backgroundColor: colors.purple[500],
-    borderColor: colors.purple[500],
+    borderColor: 'transparent',
+    ...shadows.cyan,
+  },
+  filterChipGradient: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
   },
   filterText: {
     ...typography.label,
     color: colors.text.tertiary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
   },
   filterTextActive: {
+    ...typography.label,
     color: '#FFFFFF',
   },
   list: {
@@ -163,11 +385,20 @@ const styles = StyleSheet.create({
     marginTop: 80,
     paddingHorizontal: spacing.xxxl,
   },
-  emptyIcon: {
-    fontSize: 48,
-    color: colors.purple[400],
+  emptyIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(0, 229, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.lg,
-    opacity: 0.5,
+  },
+  emptyIcon: {
+    fontSize: 32,
+    color: colors.cyan[400],
   },
   emptyTitle: {
     ...typography.h4,

@@ -1,12 +1,14 @@
 /**
- * TradeButton — Phantom-wallet-inspired action button
+ * TradeButton — Futuristic neon action button
  * 
- * Clean, rounded, with subtle gradient feel.
- * Supports: primary (purple), buy (green), sell (red), ghost (outline)
+ * Electric Cyan style: gradient primary, neon glow, glassmorphism ghost.
+ * Rounded full corners, sci-fi feel.
+ * Supports: primary (gradient), buy (green glow), sell (red glow), ghost, outline
  */
 
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors, radius, spacing, typography, shadows } from '../theme';
 
 interface Props {
@@ -30,14 +32,16 @@ export default function TradeButton({
   icon,
   fullWidth = true,
 }: Props) {
+  const isGradient = variant === 'primary' && !disabled;
+
   const getButtonStyle = () => {
-    if (disabled) return { backgroundColor: colors.bg.tertiary };
+    if (disabled) return { backgroundColor: colors.bg.tertiary, borderWidth: 1, borderColor: colors.border.subtle };
     switch (variant) {
-      case 'buy': return { backgroundColor: colors.trade.buy };
-      case 'sell': return { backgroundColor: colors.trade.sell };
+      case 'buy': return { backgroundColor: colors.trade.buy, ...shadows.sm };
+      case 'sell': return { backgroundColor: colors.trade.sell, ...shadows.sm };
       case 'ghost': return { backgroundColor: 'transparent' };
-      case 'outline': return { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.purple[400] };
-      default: return { backgroundColor: colors.purple[500], ...shadows.purple };
+      case 'outline': return { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.cyan[400] };
+      default: return {};
     }
   };
 
@@ -45,9 +49,9 @@ export default function TradeButton({
     if (disabled) return colors.text.disabled;
     switch (variant) {
       case 'buy': return colors.bg.primary;
-      case 'sell': return '#FFF';
-      case 'ghost': return colors.purple[400];
-      case 'outline': return colors.purple[400];
+      case 'sell': return '#FFFFFF';
+      case 'ghost': return colors.cyan[400];
+      case 'outline': return colors.cyan[400];
       default: return '#FFFFFF';
     }
   };
@@ -68,6 +72,41 @@ export default function TradeButton({
     }
   };
 
+  const content = (
+    <>
+      {loading ? (
+        <ActivityIndicator color={getTextColor()} size="small" />
+      ) : (
+        <View style={styles.content}>
+          {icon && <Text style={[styles.icon, { color: getTextColor() }]}>{icon}</Text>}
+          <Text style={[styles.label, { color: getTextColor(), fontSize: getFontSize() }]}>
+            {label}
+          </Text>
+        </View>
+      )}
+    </>
+  );
+
+  if (isGradient) {
+    return (
+      <TouchableOpacity
+        style={[styles.btnWrapper, fullWidth && styles.fullWidth, shadows.cyan]}
+        onPress={onPress}
+        disabled={disabled || loading}
+        activeOpacity={0.8}
+      >
+        <LinearGradient
+          colors={['#0066FF', '#00E5FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[styles.btn, getPadding(), styles.gradientBtn]}
+        >
+          {content}
+        </LinearGradient>
+      </TouchableOpacity>
+    );
+  }
+
   return (
     <TouchableOpacity
       style={[
@@ -80,26 +119,25 @@ export default function TradeButton({
       disabled={disabled || loading}
       activeOpacity={0.75}
     >
-      {loading ? (
-        <ActivityIndicator color={getTextColor()} size="small" />
-      ) : (
-        <View style={styles.content}>
-          {icon && <Text style={[styles.icon, { color: getTextColor() }]}>{icon}</Text>}
-          <Text style={[styles.label, { color: getTextColor(), fontSize: getFontSize() }]}>
-            {label}
-          </Text>
-        </View>
-      )}
+      {content}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
+  btnWrapper: {
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    marginVertical: spacing.xs,
+  },
   btn: {
     borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: spacing.xs,
+  },
+  gradientBtn: {
+    marginVertical: 0,
   },
   fullWidth: {
     width: '100%',

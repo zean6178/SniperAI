@@ -1,12 +1,13 @@
 /**
- * TokenCard — Clean card for token feed
- * Phantom-inspired: subtle borders, clean spacing, purple accents
+ * TokenCard — Glassmorphism card for token feed
+ * Electric Cyan style: dark glass background, neon border accents, 
+ * cyan glow metrics, futuristic minimal feel
  */
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import ScoreBadge from './ScoreBadge';
-import { colors, spacing, radius, typography, shadows } from '../theme';
+import { colors, spacing, radius, typography, shadows, glass } from '../theme';
 
 interface Props {
   token: any;
@@ -17,7 +18,7 @@ export default function TokenCard({ token, onPress }: Props) {
   const age = getAge(token.detectedAt);
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.header}>
         <View style={styles.tokenInfo}>
           <View style={styles.avatarContainer}>
@@ -70,12 +71,9 @@ function getAge(detectedAt: string): string {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: radius.lg,
+    ...glass.card,
     padding: spacing.lg,
     marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
     ...shadows.sm,
   },
   header: {
@@ -89,17 +87,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatarContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bg.tertiary,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(0, 229, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: colors.border.default,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
   avatarText: {
     ...typography.h3,
-    color: colors.purple[400],
+    color: colors.cyan[400],
   },
   nameContainer: {
     flex: 1,
@@ -129,20 +129,22 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.text.tertiary,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   metricValue: {
     ...typography.label,
-    color: colors.text.secondary,
+    color: colors.cyan[400],
     marginTop: 3,
+    opacity: 0.9,
   },
   warningBanner: {
     marginTop: spacing.md,
-    backgroundColor: 'rgba(248, 113, 113, 0.1)',
+    backgroundColor: 'rgba(255, 61, 113, 0.08)',
     borderRadius: radius.sm,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(248, 113, 113, 0.2)',
+    borderColor: 'rgba(255, 61, 113, 0.2)',
   },
   warningText: {
     ...typography.labelSm,

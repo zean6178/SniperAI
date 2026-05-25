@@ -1,17 +1,18 @@
 /**
  * TokenDetailScreen — Detailed token view with trade execution
  * 
- * Clean data cards, chart placeholder, and Phantom-style trade buttons.
- * Integrates with useTradeFlow for real Seed Vault signing.
+ * Electric Cyan futuristic style: glassmorphism cards, neon data rows,
+ * gradient trade buttons, cyan glow accents. Sci-fi terminal feel.
  */
 
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import ScoreBadge from '../components/ScoreBadge';
 import TradeButton from '../components/TradeButton';
 import { useWallet } from '../hooks/useWallet';
 import { useTradeFlow } from '../hooks/useTradeFlow';
-import { colors, spacing, radius, typography, shadows } from '../theme';
+import { colors, spacing, radius, typography, shadows, glass } from '../theme';
 
 export default function TokenDetailScreen({ route }: any) {
   const { token } = route.params;
@@ -64,30 +65,43 @@ export default function TokenDetailScreen({ route }: any) {
       {/* Chart Placeholder */}
       <View style={styles.chartCard}>
         <View style={styles.chartPlaceholder}>
-          <Text style={styles.chartLabel}>Price Chart</Text>
-          <View style={styles.chartLine} />
+          <Text style={styles.chartLabel}>⚡ Price Chart</Text>
+          <View style={styles.chartLine}>
+            <LinearGradient
+              colors={['#0066FF', '#00E5FF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.chartGradientLine}
+            />
+          </View>
           <Text style={styles.chartSubtext}>Real-time data loading...</Text>
         </View>
       </View>
 
       {/* Market Data */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Market Data</Text>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleDot} />
+          <Text style={styles.cardTitle}>Market Data</Text>
+        </View>
         <DataRow label="Market Cap" value={`${(token.marketCapSol || 0).toFixed(2)} SOL`} />
         <DataRow label="Bonding Curve" value={token.bondingCurvePct ? `${token.bondingCurvePct.toFixed(1)}%` : 'N/A'} />
-        <DataRow label="Volume (5m)" value={`${(token.volume5mSol || 0).toFixed(2)} SOL`} />
+        <DataRow label="Volume (5m)" value={`${(token.volume5mSol || 0).toFixed(2)} SOL`} highlight />
         <DataRow label="Buy Count (5m)" value={`${token.buyCount5m || 0}`} />
         <DataRow label="Unique Buyers" value={`${token.uniqueBuyers || 0}`} />
         <DataRow
           label="Bundled"
-          value={token.isBundled ? 'Yes' : 'No'}
+          value={token.isBundled ? '⚠ Yes' : '✓ No'}
           valueColor={token.isBundled ? colors.danger : colors.success}
         />
       </View>
 
       {/* AI Screening Results */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>AI Analysis</Text>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleDot} />
+          <Text style={styles.cardTitle}>AI Analysis</Text>
+        </View>
         {(token.reasons || []).length > 0 ? (
           (token.reasons || []).map((reason: string, i: number) => (
             <View key={i} style={styles.reasonRow}>
@@ -100,15 +114,18 @@ export default function TokenDetailScreen({ route }: any) {
         )}
       </View>
 
-      {/* Deployer Info */}
+      {/* Contract Info */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Contract</Text>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleDot} />
+          <Text style={styles.cardTitle}>Contract</Text>
+        </View>
         <View style={styles.addressRow}>
-          <Text style={styles.addressLabel}>Mint</Text>
+          <Text style={styles.addressLabel}>MINT</Text>
           <Text style={styles.addressValue} numberOfLines={1}>{token.mint}</Text>
         </View>
         <View style={styles.addressRow}>
-          <Text style={styles.addressLabel}>Deployer</Text>
+          <Text style={styles.addressLabel}>DEPLOYER</Text>
           <Text style={styles.addressValue} numberOfLines={1}>{token.deployer || 'Unknown'}</Text>
         </View>
       </View>
@@ -136,7 +153,9 @@ export default function TokenDetailScreen({ route }: any) {
           </View>
         </View>
         {!walletConnected && (
-          <Text style={styles.walletHint}>Connect wallet in Settings to trade</Text>
+          <View style={styles.walletHintContainer}>
+            <Text style={styles.walletHint}>◈ Connect wallet in Settings to trade</Text>
+          </View>
         )}
       </View>
 
@@ -145,11 +164,13 @@ export default function TokenDetailScreen({ route }: any) {
   );
 }
 
-function DataRow({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+function DataRow({ label, value, valueColor, highlight }: { label: string; value: string; valueColor?: string; highlight?: boolean }) {
   return (
-    <View style={styles.dataRow}>
+    <View style={[styles.dataRow, highlight && styles.dataRowHighlight]}>
       <Text style={styles.dataLabel}>{label}</Text>
-      <Text style={[styles.dataValue, valueColor ? { color: valueColor } : {}]}>{value}</Text>
+      <Text style={[styles.dataValue, valueColor ? { color: valueColor } : highlight ? { color: colors.cyan[400] } : {}]}>
+        {value}
+      </Text>
     </View>
   );
 }
@@ -171,17 +192,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.bg.tertiary,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: colors.border.strong,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
+    ...shadows.cyan,
   },
   avatarText: {
     ...typography.h2,
-    color: colors.purple[400],
+    color: colors.cyan[400],
   },
   symbol: {
     ...typography.h2,
@@ -195,10 +219,7 @@ const styles = StyleSheet.create({
   chartCard: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.lg,
-    backgroundColor: colors.bg.secondary,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
+    ...glass.card,
     overflow: 'hidden',
   },
   chartPlaceholder: {
@@ -209,16 +230,21 @@ const styles = StyleSheet.create({
   },
   chartLabel: {
     ...typography.label,
-    color: colors.text.tertiary,
+    color: colors.cyan[400],
     marginBottom: spacing.md,
   },
   chartLine: {
     width: '80%',
-    height: 2,
-    backgroundColor: colors.purple[400],
-    opacity: 0.3,
-    borderRadius: 1,
+    height: 3,
+    borderRadius: 2,
+    overflow: 'hidden',
     marginBottom: spacing.md,
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+  },
+  chartGradientLine: {
+    width: '60%',
+    height: '100%',
+    borderRadius: 2,
   },
   chartSubtext: {
     ...typography.caption,
@@ -228,17 +254,26 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     padding: spacing.lg,
-    backgroundColor: colors.bg.secondary,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
+    ...glass.card,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  cardTitleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.cyan[400],
+    marginRight: spacing.sm,
+    ...shadows.cyan,
   },
   cardTitle: {
     ...typography.label,
-    color: colors.purple[400],
-    marginBottom: spacing.md,
+    color: colors.cyan[400],
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
   dataRow: {
     flexDirection: 'row',
@@ -246,6 +281,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border.subtle,
+  },
+  dataRowHighlight: {
+    backgroundColor: 'rgba(0, 229, 255, 0.03)',
+    marginHorizontal: -spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.xs,
   },
   dataLabel: {
     ...typography.bodySm,
@@ -264,9 +305,10 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 3,
-    backgroundColor: colors.purple[400],
+    backgroundColor: colors.cyan[400],
     marginTop: 6,
     marginRight: spacing.sm,
+    opacity: 0.8,
   },
   reasonText: {
     ...typography.bodySm,
@@ -279,18 +321,24 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   addressRow: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   addressLabel: {
     ...typography.caption,
-    color: colors.text.tertiary,
-    marginBottom: 2,
+    color: colors.cyan[400],
+    marginBottom: 4,
     textTransform: 'uppercase',
+    letterSpacing: 1,
+    opacity: 0.7,
   },
   addressValue: {
     ...typography.bodySm,
     color: colors.text.secondary,
     fontFamily: 'monospace',
+    backgroundColor: 'rgba(0, 229, 255, 0.04)',
+    padding: spacing.sm,
+    borderRadius: radius.xs,
+    overflow: 'hidden',
   },
   tradeSection: {
     paddingHorizontal: spacing.lg,
@@ -303,10 +351,14 @@ const styles = StyleSheet.create({
   tradeBtnHalf: {
     flex: 1,
   },
+  walletHintContainer: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
   walletHint: {
     ...typography.caption,
     color: colors.text.disabled,
     textAlign: 'center',
-    marginTop: spacing.sm,
   },
 });

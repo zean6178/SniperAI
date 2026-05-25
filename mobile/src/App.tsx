@@ -1,8 +1,9 @@
 /**
  * SniperAI — Mobile App Entry Point
  * 
- * Redesigned with grey/purple theme inspired by Kiro UI + Phantom Wallet.
- * Clean navigation with smooth transitions.
+ * Electric Cyan futuristic design system.
+ * Sci-fi OS feel with neon cyan navigation accents.
+ * Bottom nav with outline icons and cyan glow indicators.
  */
 
 import React from 'react';
@@ -23,19 +24,20 @@ import { colors, navigationTheme, tabBarTheme, stackTheme } from './theme';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-// Custom tab bar icons — clean minimalist style
+// Futuristic tab bar icons — thin outline style with cyan neon accents
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const icons: Record<string, string> = {
-    Feed: '◎',
-    Portfolio: '◈',
-    AI: '◉',
-    Settings: '◇',
+    Feed: '◎',       // Target icon
+    Portfolio: '◈',   // Wallet/diamond icon
+    AI: '⚡',         // Spark/AI icon
+    Settings: '◇',   // Settings/profile icon
   };
   return (
     <View style={[styles.tabIcon, focused && styles.tabIconActive]}>
       <Text style={[styles.tabIconText, focused && styles.tabIconTextActive]}>
         {icons[name] || '○'}
       </Text>
+      {focused && <View style={styles.tabIndicator} />}
     </View>
   );
 }
@@ -51,7 +53,7 @@ function HomeTabs() {
       <Tab.Screen
         name="Feed"
         component={HomeScreen}
-        options={{ title: 'Discover', headerTitle: 'SniperAI' }}
+        options={{ title: 'Discover', headerTitle: '⚡ SniperAI' }}
       />
       <Tab.Screen
         name="Portfolio"
@@ -61,7 +63,7 @@ function HomeTabs() {
       <Tab.Screen
         name="AI"
         component={AIChatScreen}
-        options={{ title: 'AI' }}
+        options={{ title: 'AI Chat' }}
       />
       <Tab.Screen
         name="Settings"
@@ -86,7 +88,7 @@ export default function App() {
           <Stack.Screen
             name="TokenDetail"
             component={TokenDetailScreen}
-            options={{ title: 'Token' }}
+            options={{ title: 'Token Analysis' }}
           />
         </Stack.Navigator>
       </NavigationContainer>
@@ -96,20 +98,33 @@ export default function App() {
 
 const styles = StyleSheet.create({
   tabIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tabIconActive: {
-    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+    backgroundColor: 'rgba(0, 229, 255, 0.08)',
   },
   tabIconText: {
     fontSize: 18,
     color: colors.text.tertiary,
   },
   tabIconTextActive: {
-    color: colors.purple[400],
+    color: colors.cyan[400],
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: -4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.cyan[400],
+    shadowColor: '#00E5FF',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 2,
   },
 });
