@@ -1,8 +1,9 @@
 /**
  * AIChatScreen — AI copilot chat interface
  * 
- * Clean chat bubbles with purple accent for AI responses.
- * Phantom-style input bar at bottom.
+ * Electric Cyan style: cyber terminal feel, neon glow bubbles,
+ * glassmorphism input bar, futuristic AI avatar with cyan pulse.
+ * Deep space aesthetic with high contrast.
  */
 
 import React, { useState, useRef } from 'react';
@@ -10,8 +11,9 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   FlatList, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '../services/api';
-import { colors, spacing, radius, typography, shadows } from '../theme';
+import { colors, spacing, radius, typography, shadows, glass } from '../theme';
 
 interface Message {
   id: string;
@@ -92,8 +94,8 @@ export default function AIChatScreen({ navigation }: any) {
       {isLoading && (
         <View style={styles.typingRow}>
           <View style={styles.typingDots}>
-            <ActivityIndicator color={colors.purple[400]} size="small" />
-            <Text style={styles.typingText}>Thinking...</Text>
+            <ActivityIndicator color={colors.cyan[400]} size="small" />
+            <Text style={styles.typingText}>Processing...</Text>
           </View>
         </View>
       )}
@@ -117,7 +119,16 @@ export default function AIChatScreen({ navigation }: any) {
           disabled={!input.trim() || isLoading}
           activeOpacity={0.7}
         >
-          <Text style={styles.sendIcon}>↑</Text>
+          {input.trim() ? (
+            <LinearGradient
+              colors={['#0066FF', '#00E5FF']}
+              style={styles.sendBtnGradient}
+            >
+              <Text style={styles.sendIcon}>↑</Text>
+            </LinearGradient>
+          ) : (
+            <Text style={[styles.sendIcon, { color: colors.text.disabled }]}>↑</Text>
+          )}
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -131,7 +142,7 @@ function ChatBubble({ message, navigation }: { message: Message; navigation: any
     <View style={[styles.bubbleContainer, isUser && styles.bubbleContainerUser]}>
       {!isUser && (
         <View style={styles.aiAvatar}>
-          <Text style={styles.aiAvatarText}>◉</Text>
+          <Text style={styles.aiAvatarText}>⚡</Text>
         </View>
       )}
       <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAI]}>
@@ -194,18 +205,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row-reverse',
   },
   aiAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.purple[500],
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(0, 229, 255, 0.15)',
+    borderWidth: 1,
+    borderColor: colors.border.strong,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.sm,
     marginBottom: 2,
   },
   aiAvatarText: {
-    fontSize: 14,
-    color: '#FFF',
+    fontSize: 12,
   },
   bubble: {
     borderRadius: radius.xl,
@@ -213,14 +225,13 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   bubbleUser: {
-    backgroundColor: colors.purple[500],
+    backgroundColor: colors.blue[400],
     borderBottomRightRadius: radius.xs,
+    ...shadows.neonBlue,
   },
   bubbleAI: {
-    backgroundColor: colors.bg.secondary,
+    ...glass.card,
     borderBottomLeftRadius: radius.xs,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
   },
   bubbleText: {
     ...typography.body,
@@ -236,10 +247,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.bg.tertiary,
+    backgroundColor: 'rgba(0, 229, 255, 0.06)',
     borderRadius: radius.md,
     padding: spacing.md,
     marginTop: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.border.default,
   },
   tokenSugLeft: {},
   tokenSugSymbol: {
@@ -247,14 +260,16 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
   tokenSugBadge: {
-    backgroundColor: `${colors.purple[400]}20`,
+    backgroundColor: 'rgba(0, 229, 255, 0.12)',
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border.default,
   },
   tokenSugScore: {
     ...typography.numberSm,
-    color: colors.purple[400],
+    color: colors.cyan[400],
   },
   typingRow: {
     paddingHorizontal: spacing.lg,
@@ -267,7 +282,8 @@ const styles = StyleSheet.create({
   },
   typingText: {
     ...typography.bodySm,
-    color: colors.text.tertiary,
+    color: colors.cyan[400],
+    opacity: 0.7,
   },
   inputBar: {
     flexDirection: 'row',
@@ -288,22 +304,27 @@ const styles = StyleSheet.create({
     ...typography.body,
     maxHeight: 100,
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: colors.border.default,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.purple[500],
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.sm,
-    ...shadows.purple,
+    overflow: 'hidden',
+  },
+  sendBtnGradient: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.cyan,
   },
   sendBtnDisabled: {
     backgroundColor: colors.bg.tertiary,
-    shadowOpacity: 0,
-    elevation: 0,
   },
   sendIcon: {
     fontSize: 18,

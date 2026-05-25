@@ -1,15 +1,17 @@
 /**
  * SettingsScreen — Account, wallet, alerts, risk management
  * 
- * Clean sections with toggle-style rows. Purple accent for active states.
- * Phantom-wallet-inspired settings layout.
+ * Electric Cyan style: Dark glassmorphism cards, neon cyan toggles,
+ * futuristic section headers, premium cyber interface.
+ * Deep space aesthetic with high contrast.
  */
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useWallet } from '../hooks/useWallet';
 import TradeButton from '../components/TradeButton';
-import { colors, spacing, radius, typography, shadows } from '../theme';
+import { colors, spacing, radius, typography, shadows, glass } from '../theme';
 import { getSKRBalance, claimDailyReward, checkGenesisToken } from '../services/skr';
 
 export default function SettingsScreen() {
@@ -40,7 +42,10 @@ export default function SettingsScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Wallet Section */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Wallet</Text>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleDot} />
+          <Text style={styles.cardTitle}>Wallet</Text>
+        </View>
         {isConnected ? (
           <>
             <View style={styles.walletInfo}>
@@ -51,7 +56,7 @@ export default function SettingsScreen() {
                 <Text style={styles.walletAddress}>
                   {wallet?.slice(0, 6)}...{wallet?.slice(-4)}
                 </Text>
-                <Text style={styles.walletStatus}>Connected via Seed Vault</Text>
+                <Text style={styles.walletStatus}>● Connected via Seed Vault</Text>
               </View>
             </View>
             {hasGenesis && (
@@ -68,7 +73,7 @@ export default function SettingsScreen() {
           </>
         ) : (
           <TradeButton
-            label={isConnecting ? 'Connecting...' : 'Connect Wallet'}
+            label={isConnecting ? 'Connecting...' : '◈ Connect Wallet'}
             variant="primary"
             onPress={connect}
             loading={isConnecting}
@@ -78,14 +83,17 @@ export default function SettingsScreen() {
 
       {/* SKR Rewards */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>SKR Rewards</Text>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleDot} />
+          <Text style={styles.cardTitle}>SKR Rewards</Text>
+        </View>
         <View style={styles.skrRow}>
           <View>
             <Text style={styles.skrBalance}>{skrBalance.toFixed(1)}</Text>
             <Text style={styles.skrLabel}>SKR Balance</Text>
           </View>
           <TradeButton
-            label="Claim Daily"
+            label="⚡ Claim Daily"
             variant="outline"
             size="sm"
             onPress={handleClaimDaily}
@@ -96,7 +104,10 @@ export default function SettingsScreen() {
 
       {/* Notifications */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Notifications</Text>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleDot} />
+          <Text style={styles.cardTitle}>Notifications</Text>
+        </View>
         <SettingToggle
           label="Push Alerts"
           description="Get notified on high-score tokens"
@@ -111,7 +122,10 @@ export default function SettingsScreen() {
 
       {/* Risk Management */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Risk Management</Text>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleDot} />
+          <Text style={styles.cardTitle}>Risk Management</Text>
+        </View>
         <SettingToggle
           label="Auto-Trade"
           description="Automatically execute on high scores"
@@ -128,8 +142,11 @@ export default function SettingsScreen() {
 
       {/* App Info */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>About</Text>
-        <SettingRow label="Version" value="1.0.0" />
+        <View style={styles.cardHeader}>
+          <View style={styles.cardTitleDot} />
+          <Text style={styles.cardTitle}>About</Text>
+        </View>
+        <SettingRow label="Version" value="1.1.0" />
         <SettingRow label="Platform" value="Solana Mobile (Seeker)" />
         <SettingRow label="Network" value="Mainnet Beta" />
       </View>
@@ -160,8 +177,8 @@ function SettingToggle({ label, description, value, onToggle }: {
       <Switch
         value={value}
         onValueChange={onToggle}
-        trackColor={{ false: colors.bg.tertiary, true: colors.purple[500] }}
-        thumbColor={value ? '#FFFFFF' : colors.text.tertiary}
+        trackColor={{ false: colors.bg.tertiary, true: 'rgba(0, 229, 255, 0.4)' }}
+        thumbColor={value ? colors.cyan[400] : colors.text.tertiary}
       />
     </View>
   );
@@ -174,19 +191,27 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   card: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: radius.lg,
+    ...glass.card,
     padding: spacing.lg,
     marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  cardTitleDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.cyan[400],
+    marginRight: spacing.sm,
   },
   cardTitle: {
     ...typography.label,
-    color: colors.purple[400],
+    color: colors.cyan[400],
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.lg,
+    letterSpacing: 0.8,
   },
   walletInfo: {
     flexDirection: 'row',
@@ -194,17 +219,19 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   walletAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bg.tertiary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 229, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: colors.border.strong,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
   walletAvatarText: {
-    fontSize: 18,
-    color: colors.purple[400],
+    fontSize: 20,
+    color: colors.cyan[400],
   },
   walletDetails: {},
   walletAddress: {
@@ -215,21 +242,21 @@ const styles = StyleSheet.create({
   walletStatus: {
     ...typography.caption,
     color: colors.success,
-    marginTop: 2,
+    marginTop: 3,
   },
   genesisBadge: {
-    backgroundColor: `${colors.purple[400]}15`,
+    backgroundColor: 'rgba(0, 229, 255, 0.08)',
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     alignSelf: 'flex-start',
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border.purple,
+    borderColor: colors.border.strong,
   },
   genesisText: {
     ...typography.labelSm,
-    color: colors.purple[300],
+    color: colors.cyan[400],
   },
   skrRow: {
     flexDirection: 'row',

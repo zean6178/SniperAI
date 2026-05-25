@@ -1,30 +1,40 @@
 /**
  * PortfolioScreen — Holdings overview with P&L tracking
  * 
- * Clean summary header with portfolio stats, position cards below.
- * Purple accent for positive metrics, clean grey for neutral.
+ * Electric Cyan style: Glassmorphism summary card with neon glow,
+ * position cards with gradient accents, futuristic progress bars.
+ * Deep space aesthetic with high contrast.
  */
 
 import React from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { usePortfolio } from '../hooks/usePortfolio';
-import { colors, spacing, radius, typography, shadows } from '../theme';
+import { colors, spacing, radius, typography, shadows, glass } from '../theme';
 
 export default function PortfolioScreen() {
   const { positions, summary, isLoading, refresh } = usePortfolio();
 
   return (
     <View style={styles.container}>
-      {/* Portfolio Summary */}
+      {/* Portfolio Summary Card */}
       <View style={styles.summaryCard}>
-        <Text style={styles.totalLabel}>Total Value</Text>
+        {/* Subtle top glow line */}
+        <LinearGradient
+          colors={['#0066FF', '#00E5FF', '#0066FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.summaryGlowLine}
+        />
+        
+        <Text style={styles.totalLabel}>TOTAL VALUE</Text>
         <Text style={styles.totalValue}>
           {summary.totalCurrentValueSol.toFixed(3)} SOL
         </Text>
         <View style={styles.pnlRow}>
           <View style={[
             styles.pnlBadge,
-            { backgroundColor: summary.totalPnlSol >= 0 ? `${colors.success}20` : `${colors.danger}20` }
+            { backgroundColor: summary.totalPnlSol >= 0 ? 'rgba(0, 230, 118, 0.12)' : 'rgba(255, 61, 113, 0.12)' }
           ]}>
             <Text style={[
               styles.pnlText,
@@ -47,8 +57,13 @@ export default function PortfolioScreen() {
 
       {/* Positions List */}
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Open Positions</Text>
-        <Text style={styles.sectionCount}>{positions.length}</Text>
+        <View style={styles.sectionLeft}>
+          <View style={styles.sectionDot} />
+          <Text style={styles.sectionTitle}>Open Positions</Text>
+        </View>
+        <View style={styles.sectionCountBadge}>
+          <Text style={styles.sectionCount}>{positions.length}</Text>
+        </View>
       </View>
 
       <FlatList
@@ -59,13 +74,15 @@ export default function PortfolioScreen() {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={refresh}
-            tintColor={colors.purple[400]}
-            colors={[colors.purple[400]]}
+            tintColor={colors.cyan[400]}
+            colors={[colors.cyan[400]]}
           />
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>◈</Text>
+            <View style={styles.emptyIconContainer}>
+              <Text style={styles.emptyIcon}>◈</Text>
+            </View>
             <Text style={styles.emptyTitle}>No open positions</Text>
             <Text style={styles.emptySubtext}>
               Tokens you buy will appear here
@@ -104,7 +121,7 @@ function PositionCard({ position }: { position: any }) {
         </View>
         <View style={styles.posRight}>
           <Text style={[styles.posMultiple, { color: pnlColor }]}>{multiple}x</Text>
-          <View style={[styles.posPnlBadge, { backgroundColor: `${pnlColor}15` }]}>
+          <View style={[styles.posPnlBadge, { backgroundColor: `${pnlColor}18` }]}>
             <Text style={[styles.posPnlText, { color: pnlColor }]}>
               {isProfit ? '+' : ''}{(position.pnlPct || 0).toFixed(1)}%
             </Text>
@@ -115,12 +132,14 @@ function PositionCard({ position }: { position: any }) {
       {/* Progress bar showing peak vs current */}
       <View style={styles.progressContainer}>
         <View style={styles.progressBar}>
-          <View
+          <LinearGradient
+            colors={isProfit ? ['#0066FF', '#00E5FF'] : ['#FF3D71', '#FF6B9D']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
             style={[
               styles.progressFill,
               {
-                width: `${Math.min(100, Math.max(0, (position.currentMultiple || 1) / (position.peakMultiple || 2) * 100))}%`,
-                backgroundColor: pnlColor,
+                width: `${Math.min(100, Math.max(5, (position.currentMultiple || 1) / (position.peakMultiple || 2) * 100))}%`,
               }
             ]}
           />
@@ -150,22 +169,30 @@ const styles = StyleSheet.create({
   summaryCard: {
     margin: spacing.lg,
     padding: spacing.xl,
-    backgroundColor: colors.bg.secondary,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
+    ...glass.card,
+    borderColor: colors.border.strong,
+    overflow: 'hidden',
     ...shadows.md,
   },
+  summaryGlowLine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    opacity: 0.6,
+  },
   totalLabel: {
-    ...typography.bodySm,
-    color: colors.text.tertiary,
+    ...typography.caption,
+    color: colors.cyan[400],
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1.5,
+    marginTop: spacing.sm,
   },
   totalValue: {
     ...typography.numberLg,
     color: colors.text.primary,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
   pnlRow: {
     marginTop: spacing.sm,
@@ -194,12 +221,13 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 28,
-    backgroundColor: colors.border.subtle,
+    backgroundColor: colors.border.default,
   },
   statLabel: {
     ...typography.caption,
     color: colors.text.tertiary,
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   statValue: {
     ...typography.label,
@@ -213,30 +241,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
+  sectionLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.cyan[400],
+    marginRight: spacing.sm,
+  },
   sectionTitle: {
     ...typography.h4,
     color: colors.text.primary,
   },
-  sectionCount: {
-    ...typography.label,
-    color: colors.text.tertiary,
-    backgroundColor: colors.bg.secondary,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+  sectionCountBadge: {
+    backgroundColor: 'rgba(0, 229, 255, 0.1)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 3,
     borderRadius: radius.full,
-    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border.default,
+  },
+  sectionCount: {
+    ...typography.labelSm,
+    color: colors.cyan[400],
   },
   list: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.xxxl,
   },
   posCard: {
-    backgroundColor: colors.bg.secondary,
-    borderRadius: radius.lg,
+    ...glass.card,
     padding: spacing.lg,
     marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border.subtle,
   },
   posHeader: {
     flexDirection: 'row',
@@ -248,17 +287,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   posAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.bg.tertiary,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0, 229, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: colors.border.default,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
   },
   posAvatarText: {
     ...typography.h4,
-    color: colors.purple[400],
+    color: colors.cyan[400],
   },
   posSymbol: {
     ...typography.h4,
@@ -294,8 +335,9 @@ const styles = StyleSheet.create({
   progressBar: {
     flex: 1,
     height: 3,
-    backgroundColor: colors.bg.tertiary,
+    backgroundColor: 'rgba(0, 229, 255, 0.08)',
     borderRadius: 2,
+    overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
@@ -310,11 +352,20 @@ const styles = StyleSheet.create({
     marginTop: 60,
     paddingHorizontal: spacing.xxxl,
   },
-  emptyIcon: {
-    fontSize: 48,
-    color: colors.purple[400],
-    opacity: 0.4,
+  emptyIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(0, 229, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: colors.border.default,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing.lg,
+  },
+  emptyIcon: {
+    fontSize: 28,
+    color: colors.cyan[400],
   },
   emptyTitle: {
     ...typography.h4,

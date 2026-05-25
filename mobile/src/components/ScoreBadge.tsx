@@ -1,11 +1,11 @@
 /**
- * ScoreBadge — Visual score indicator with purple gradient for high scores
- * Clean circular design inspired by Phantom wallet badges
+ * ScoreBadge — Neon score indicator with cyan glow for high scores
+ * Electric Cyan style: circular badge with gradient border feel, neon glow
  */
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, typography } from '../theme';
+import { colors, radius, typography, shadows } from '../theme';
 
 interface Props {
   score: number;
@@ -15,7 +15,7 @@ interface Props {
 
 export default function ScoreBadge({ score, decision, size = 'md' }: Props) {
   const getColor = () => {
-    if (score >= 70) return colors.purple[400];
+    if (score >= 70) return colors.cyan[400];
     if (score >= 50) return colors.warning;
     return colors.danger;
   };
@@ -28,7 +28,8 @@ export default function ScoreBadge({ score, decision, size = 'md' }: Props) {
 
   const badgeColor = getColor();
   const sizeMultiplier = size === 'lg' ? 1.4 : size === 'sm' ? 0.8 : 1;
-  const badgeSize = 44 * sizeMultiplier;
+  const badgeSize = 46 * sizeMultiplier;
+  const isHighScore = score >= 70;
 
   return (
     <View style={styles.container}>
@@ -40,7 +41,14 @@ export default function ScoreBadge({ score, decision, size = 'md' }: Props) {
             height: badgeSize,
             borderRadius: badgeSize / 2,
             borderColor: badgeColor,
-            backgroundColor: `${badgeColor}15`,
+            backgroundColor: `${badgeColor}12`,
+          },
+          isHighScore && {
+            shadowColor: badgeColor,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.5,
+            shadowRadius: 8,
+            elevation: 4,
           },
         ]}
       >
@@ -49,7 +57,7 @@ export default function ScoreBadge({ score, decision, size = 'md' }: Props) {
             styles.score,
             {
               color: badgeColor,
-              fontSize: 14 * sizeMultiplier,
+              fontSize: 15 * sizeMultiplier,
             },
           ]}
         >
@@ -76,12 +84,13 @@ const styles = StyleSheet.create({
   },
   score: {
     fontWeight: '800',
+    fontFamily: 'monospace',
   },
   label: {
     ...typography.caption,
-    marginTop: 3,
+    marginTop: 4,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
 });
