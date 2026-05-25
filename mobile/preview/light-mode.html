@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SniperAI — Light Mode Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Poppins', sans-serif;
+  background: #E8F0F8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 40px 20px;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.phone {
+  width: 375px;
+  height: 812px;
+  background: #FFFFFF;
+  border-radius: 40px;
+  border: 3px solid rgba(0, 102, 255, 0.1);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08), 0 0 40px rgba(0, 102, 255, 0.05);
+}
+
+.phone-label {
+  text-align: center;
+  color: #0066FF;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.status-bar {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1A2E44;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ═══════════ HOME SCREEN (Hero) — LIGHT ═══════════ */
+.home-screen {
+  height: calc(100% - 44px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 32px;
+  position: relative;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F0F8FF 100%);
+}
+
+.black-hole {
+  width: 200px;
+  height: 200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.orbit-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid;
+  animation: spin 20s linear infinite;
+}
+.orbit-ring-1 { width: 100px; height: 100px; border-color: rgba(0, 102, 255, 0.25); animation-duration: 15s; }
+.orbit-ring-2 { width: 150px; height: 150px; border-color: rgba(0, 102, 255, 0.15); animation-duration: 25s; animation-direction: reverse; }
+.orbit-ring-3 { width: 200px; height: 200px; border-color: rgba(0, 102, 255, 0.08); animation-duration: 35s; }
+
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes pulse { 0%,100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.2); } }
+
+.bh-core {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(0, 102, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 30px rgba(0, 102, 255, 0.15);
+}
+.bh-inner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 102, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bh-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #0066FF;
+  box-shadow: 0 0 12px rgba(0, 102, 255, 0.5);
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #0066FF;
+  opacity: 0.5;
+  animation: pulse 3s ease-in-out infinite;
+}
+.p1 { top: 30px; left: 60px; animation-delay: 0s; }
+.p2 { top: 45px; right: 50px; animation-delay: 0.5s; }
+.p3 { bottom: 40px; left: 45px; animation-delay: 1s; }
+.p4 { bottom: 25px; right: 65px; animation-delay: 1.5s; }
+.p5 { top: 20px; right: 80px; width: 2px; height: 2px; animation-delay: 2s; }
+.p6 { bottom: 55px; left: 80px; width: 2px; height: 2px; animation-delay: 2.5s; }
+
+.hero-title {
+  font-size: 42px;
+  font-weight: 700;
+  color: #0A1A2E;
+  letter-spacing: -1px;
+  margin-bottom: 8px;
+}
+.hero-subtitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: #7A98B8;
+  letter-spacing: 0.5px;
+  margin-bottom: 48px;
+}
+
+.cta-btn {
+  width: 100%;
+  max-width: 260px;
+  padding: 16px 32px;
+  background: linear-gradient(90deg, #0066FF, #00CCE5);
+  border-radius: 999px;
+  text-align: center;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(0, 102, 255, 0.25);
+  margin-bottom: 16px;
+  cursor: pointer;
+  border: none;
+}
+.wallet-btn {
+  padding: 14px 28px;
+  border-radius: 999px;
+  background: rgba(240, 248, 255, 0.9);
+  border: 1px solid rgba(0, 102, 255, 0.2);
+  color: #0066FF;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Bottom nav — Light */
+.bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  background: #FFFFFF;
+  border-top: 1px solid rgba(0, 102, 255, 0.08);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 10px;
+}
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.nav-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #A0B8D0;
+  position: relative;
+}
+.nav-icon.active {
+  background: rgba(0, 102, 255, 0.06);
+  color: #0066FF;
+}
+.nav-icon.active::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 2px;
+  background: #0066FF;
+  box-shadow: 0 0 6px rgba(0, 102, 255, 0.5);
+}
+.nav-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #A0B8D0;
+}
+.nav-label.active { color: #0066FF; }
+
+/* ═══════════ FEED SCREEN — LIGHT ═══════════ */
+.feed-screen {
+  height: calc(100% - 44px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #F8FBFF;
+}
+
+.feed-status {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0, 102, 255, 0.06);
+  background: #FFFFFF;
+}
+.status-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #7A98B8;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #00C853;
+}
+.status-count {
+  font-size: 12px;
+  color: #0066FF;
+  opacity: 0.7;
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #FFFFFF;
+}
+.filter-chip {
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: #F0F5FA;
+  border: 1px solid rgba(0, 102, 255, 0.06);
+  font-size: 13px;
+  font-weight: 600;
+  color: #7A98B8;
+  cursor: pointer;
+}
+.filter-chip.active {
+  background: linear-gradient(90deg, #0066FF, #00CCE5);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.2);
+}
+
+.card-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  padding-bottom: 80px;
+}
+
+.token-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 102, 255, 0.06);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card-token-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.card-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(0, 102, 255, 0.05);
+  border: 1px solid rgba(0, 102, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0066FF;
+}
+.card-symbol {
+  font-size: 16px;
+  font-weight: 600;
+  color: #0A1A2E;
+}
+.card-name {
+  font-size: 12px;
+  color: #7A98B8;
+  margin-top: 2px;
+}
+.card-score {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 2px solid #0066FF;
+  background: rgba(0, 102, 255, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0066FF;
+  font-family: monospace;
+  box-shadow: 0 0 8px rgba(0, 102, 255, 0.15);
+}
+.card-score.mid {
+  border-color: #F59E0B;
+  color: #D97706;
+  background: rgba(245, 158, 11, 0.04);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.12);
+}
+.card-metrics {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 102, 255, 0.05);
+}
+.metric {
+  text-align: center;
+  flex: 1;
+}
+.metric-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #7A98B8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.metric-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0066FF;
+  margin-top: 3px;
+  opacity: 0.85;
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ PHONE 1: HOME HERO (LIGHT) ═══════════ -->
+<div>
+  <div class="phone">
+    <div class="status-bar">9:41</div>
+    <div class="home-screen">
+      <div class="black-hole">
+        <div class="orbit-ring orbit-ring-3"></div>
+        <div class="orbit-ring orbit-ring-2"></div>
+        <div class="orbit-ring orbit-ring-1"></div>
+        <div class="bh-core">
+          <div class="bh-inner">
+            <div class="bh-dot"></div>
+          </div>
+        </div>
+        <div class="particle p1"></div>
+        <div class="particle p2"></div>
+        <div class="particle p3"></div>
+        <div class="particle p4"></div>
+        <div class="particle p5"></div>
+        <div class="particle p6"></div>
+      </div>
+      <div class="hero-title">Sniper</div>
+      <div class="hero-subtitle">AI-Powered Token Intelligence</div>
+      <div class="cta-btn">⚡ Start Sniping</div>
+      <div class="wallet-btn">◈ Connect Wallet</div>
+
+      <div class="bottom-nav">
+        <div class="nav-item">
+          <div class="nav-icon active">◎</div>
+          <div class="nav-label active">Discover</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">◈</div>
+          <div class="nav-label">Portfolio</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⚡</div>
+          <div class="nav-label">AI Chat</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">◇</div>
+          <div class="nav-label">Settings</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="phone-label">Home — Hero (Light)</div>
+</div>
+
+<!-- ═══════════ PHONE 2: TOKEN FEED (LIGHT) ═══════════ -->
+<div>
+  <div class="phone">
+    <div class="status-bar">9:41</div>
+    <div class="feed-screen">
+      <div class="feed-status">
+        <div class="status-left">
+          <div class="status-dot"></div>
+          <span>Live Feed</span>
+        </div>
+        <div class="status-count">12 tokens</div>
+      </div>
+      <div class="filter-row">
+        <div class="filter-chip active">◎ All</div>
+        <div class="filter-chip">⚡ Snipe</div>
+        <div class="filter-chip">◉ Watch</div>
+      </div>
+      <div class="card-list">
+        <div class="token-card">
+          <div class="card-header">
+            <div class="card-token-info">
+              <div class="card-avatar">M</div>
+              <div>
+                <div class="card-symbol">MOONCAT</div>
+                <div class="card-name">Moon Cat Protocol</div>
+              </div>
+            </div>
+            <div class="card-score">82</div>
+          </div>
+          <div class="card-metrics">
+            <div class="metric"><div class="metric-label">MC</div><div class="metric-value">24.5 SOL</div></div>
+            <div class="metric"><div class="metric-label">Vol</div><div class="metric-value">8.3</div></div>
+            <div class="metric"><div class="metric-label">Buys</div><div class="metric-value">47</div></div>
+            <div class="metric"><div class="metric-label">Age</div><div class="metric-value">2m</div></div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="card-header">
+            <div class="card-token-info">
+              <div class="card-avatar">S</div>
+              <div>
+                <div class="card-symbol">SOLAPE</div>
+                <div class="card-name">Solape Finance</div>
+              </div>
+            </div>
+            <div class="card-score mid">58</div>
+          </div>
+          <div class="card-metrics">
+            <div class="metric"><div class="metric-label">MC</div><div class="metric-value">12.1 SOL</div></div>
+            <div class="metric"><div class="metric-label">Vol</div><div class="metric-value">3.7</div></div>
+            <div class="metric"><div class="metric-label">Buys</div><div class="metric-value">19</div></div>
+            <div class="metric"><div class="metric-label">Age</div><div class="metric-value">5m</div></div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="card-header">
+            <div class="card-token-info">
+              <div class="card-avatar">Q</div>
+              <div>
+                <div class="card-symbol">QUANTUM</div>
+                <div class="card-name">Quantum AI Token</div>
+              </div>
+            </div>
+            <div class="card-score">91</div>
+          </div>
+          <div class="card-metrics">
+            <div class="metric"><div class="metric-label">MC</div><div class="metric-value">56.2 SOL</div></div>
+            <div class="metric"><div class="metric-label">Vol</div><div class="metric-value">22.1</div></div>
+            <div class="metric"><div class="metric-label">Buys</div><div class="metric-value">89</div></div>
+            <div class="metric"><div class="metric-label">Age</div><div class="metric-value">45s</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item">
+          <div class="nav-icon active">◎</div>
+          <div class="nav-label active">Discover</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">◈</div>
+          <div class="nav-label">Portfolio</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⚡</div>
+          <div class="nav-label">AI Chat</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">◇</div>
+          <div class="nav-label">Settings</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="phone-label">Feed — Token Cards (Light)</div>
+</div>
+
+</body>
+</html>
