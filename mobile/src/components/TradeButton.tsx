@@ -1,9 +1,9 @@
 /**
- * TradeButton — Futuristic neon action button
+ * TradeButton — Premium neon action button
  * 
- * Electric Cyan style: gradient primary, neon glow, glassmorphism ghost.
- * Rounded full corners, sci-fi feel.
- * Supports: primary (gradient), buy (green glow), sell (red glow), ghost, outline
+ * Primary: Gradient pill (#0066FF → #00E5FF) with glow shadow, floating feel
+ * Secondary: Transparent glass with thin border
+ * Buy/Sell: Colored with subtle glow
  */
 
 import React from 'react';
@@ -35,32 +35,32 @@ export default function TradeButton({
   const isGradient = variant === 'primary' && !disabled;
 
   const getButtonStyle = () => {
-    if (disabled) return { backgroundColor: colors.bg.tertiary, borderWidth: 1, borderColor: colors.border.subtle };
+    if (disabled) return { backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)' };
     switch (variant) {
-      case 'buy': return { backgroundColor: colors.trade.buy, ...shadows.sm };
-      case 'sell': return { backgroundColor: colors.trade.sell, ...shadows.sm };
+      case 'buy': return { backgroundColor: colors.trade.buy };
+      case 'sell': return { backgroundColor: colors.trade.sell };
       case 'ghost': return { backgroundColor: 'transparent' };
-      case 'outline': return { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.cyan[400] };
+      case 'outline': return { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: 'rgba(0, 229, 255, 0.4)' };
       default: return {};
     }
   };
 
   const getTextColor = () => {
-    if (disabled) return colors.text.disabled;
+    if (disabled) return 'rgba(255,255,255,0.2)';
     switch (variant) {
-      case 'buy': return colors.bg.primary;
+      case 'buy': return colors.dark.bg;
       case 'sell': return '#FFFFFF';
-      case 'ghost': return colors.cyan[400];
-      case 'outline': return colors.cyan[400];
+      case 'ghost': return colors.primary.cyan;
+      case 'outline': return colors.primary.cyan;
       default: return '#FFFFFF';
     }
   };
 
   const getPadding = () => {
     switch (size) {
-      case 'sm': return { paddingVertical: 10, paddingHorizontal: 16 };
-      case 'lg': return { paddingVertical: 18, paddingHorizontal: 28 };
-      default: return { paddingVertical: 14, paddingHorizontal: 22 };
+      case 'sm': return { paddingVertical: 10, paddingHorizontal: 18 };
+      case 'lg': return { paddingVertical: 18, paddingHorizontal: 32 };
+      default: return { paddingVertical: 14, paddingHorizontal: 24 };
     }
   };
 
@@ -90,16 +90,16 @@ export default function TradeButton({
   if (isGradient) {
     return (
       <TouchableOpacity
-        style={[styles.btnWrapper, fullWidth && styles.fullWidth, shadows.cyan]}
+        style={[styles.wrapper, fullWidth && styles.fullWidth, shadows.blueGlow]}
         onPress={onPress}
         disabled={disabled || loading}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
       >
         <LinearGradient
           colors={['#0066FF', '#00E5FF']}
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.btn, getPadding(), styles.gradientBtn]}
+          end={{ x: 1, y: 1 }}
+          style={[styles.btn, getPadding()]}
         >
           {content}
         </LinearGradient>
@@ -125,19 +125,16 @@ export default function TradeButton({
 }
 
 const styles = StyleSheet.create({
-  btnWrapper: {
-    borderRadius: radius.md,
+  wrapper: {
+    borderRadius: radius.button,
     overflow: 'hidden',
     marginVertical: spacing.xs,
   },
   btn: {
-    borderRadius: radius.md,
+    borderRadius: radius.button,
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: spacing.xs,
-  },
-  gradientBtn: {
-    marginVertical: 0,
   },
   fullWidth: {
     width: '100%',

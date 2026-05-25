@@ -1,102 +1,102 @@
 /**
- * SniperAI Design System — Electric Cyan Edition
+ * SniperAI Design System — Electric Cyan Edition v2
  * 
- * Style: Futuristic AI/Web3 UI · Sci-fi operating system feel · Premium neon aesthetic
+ * Style: Futuristic AI/Web3 · Minimal premium fintech · Sci-fi neon glow
+ * Font: Inter / SF Pro Display style (system default)
  * 
  * Color Philosophy:
- * - Background: Black Blue → Deep Navy gradient layers
- * - Primary: Electric Cyan (#00E5FF) with Neon Blue (#0066FF) gradient
- * - Glow effects: Cyan neon with soft radiance
- * - High contrast text on dark backgrounds
- * - Glassmorphism cards with cyan border accents
+ * - Dark: Deep Navy #0A1120 base, transparent glass surfaces, cyan neon glow
+ * - Light: Soft white with blue tint, clean shadows, blue accents
+ * - Primary: Electric Blue #0066FF → Cyan #00E5FF gradient
+ * - Glassmorphism: blur + transparency + thin borders
  */
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// COLORS — Electric Cyan Palette
+// COLORS — Electric Cyan Palette v2
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const colors = {
-  // Background layers (darkest → lightest)
-  bg: {
-    primary: '#050B14',       // Black Blue — deepest background
-    secondary: '#0A1A2E',     // Deep Navy — cards, elevated surfaces
-    tertiary: '#0F2440',      // Slightly lighter navy — inputs, nested elements
-    hover: '#133052',         // Hover/press states
-    glass: 'rgba(10, 26, 46, 0.85)',  // Glassmorphism background
+  // Primary brand
+  primary: {
+    blue: '#0066FF',           // Electric Blue — Primary CTA
+    cyan: '#00E5FF',           // Electric Cyan — Glow/accent
+    soft: '#00B8FF',           // Cyan Soft — Secondary glow
+    gradient: ['#0066FF', '#00E5FF'] as const,
+    gradientSoft: ['#0066FF', '#00B8FF'] as const,
   },
 
-  // Cyan accent spectrum
-  cyan: {
-    50: '#E0FBFF',
-    100: '#B3F5FF',
-    200: '#66ECFF',
-    300: '#33E8FF',
-    400: '#00E5FF',           // Electric Cyan — Primary
-    500: '#00CCE5',
-    600: '#00B3CC',
-    700: '#0099B3',
-    800: '#008099',
-    900: '#006680',
-    gradient: ['#0066FF', '#00E5FF'],  // Main gradient (Neon Blue → Electric Cyan)
-    glow: 'rgba(0, 229, 255, 0.3)',    // Glow effect
-    glowStrong: 'rgba(0, 229, 255, 0.5)',
+  // Dark mode backgrounds
+  dark: {
+    bg: '#0A1120',             // Deep Navy — main background
+    surface: '#111827',        // Midnight Navy — card surfaces
+    elevated: '#1A2235',       // Slightly lifted surfaces
+    glass: 'rgba(255, 255, 255, 0.03)',  // Glass card fill
+    glassHover: 'rgba(255, 255, 255, 0.05)',
+    input: 'rgba(255, 255, 255, 0.04)',
   },
 
-  // Neon Blue accent
-  blue: {
-    400: '#0066FF',           // Neon Blue
-    500: '#0055DD',
-    600: '#0044BB',
-    gradient: ['#0066FF', '#00E5FF'],
+  // Light mode backgrounds
+  light: {
+    bg: '#FFFFFF',
+    surface: '#F8FBFF',        // Soft blue-tinted white
+    elevated: '#FFFFFF',
+    card: '#FFFFFF',
+    input: '#F0F4FA',
   },
 
-  // Text hierarchy
-  text: {
+  // Text — Dark mode
+  textDark: {
     primary: '#FFFFFF',
-    secondary: '#B0C4D8',
-    tertiary: '#5A7A9A',
-    disabled: '#2A4A6A',
-    inverse: '#050B14',
-    cyan: '#00E5FF',
+    secondary: 'rgba(255, 255, 255, 0.6)',
+    tertiary: 'rgba(255, 255, 255, 0.35)',
+    disabled: 'rgba(255, 255, 255, 0.2)',
+    accent: '#00E5FF',
+  },
+
+  // Text — Light mode
+  textLight: {
+    primary: '#0A1120',
+    secondary: '#4A5F78',
+    tertiary: '#7A8FA8',
+    disabled: '#B0BFD0',
+    accent: '#0066FF',
   },
 
   // Status colors
-  success: '#00E676',         // Neon green for profit
-  danger: '#FF3D71',          // Neon red for loss
-  warning: '#FFD600',         // Bright amber for caution
-  info: '#00B0FF',            // Info blue
+  success: '#00E676',
+  danger: '#FF3D71',
+  warning: '#FFB800',
+  info: '#00B8FF',
 
-  // Trading specific
+  // Trading
   trade: {
     buy: '#00E676',
     sell: '#FF3D71',
-    neutral: '#5A7A9A',
+    neutral: 'rgba(255, 255, 255, 0.4)',
   },
 
-  // Borders
-  border: {
-    subtle: 'rgba(0, 229, 255, 0.08)',
-    default: 'rgba(0, 229, 255, 0.15)',
-    strong: 'rgba(0, 229, 255, 0.3)',
-    cyan: 'rgba(0, 229, 255, 0.5)',
-    glow: 'rgba(0, 229, 255, 0.4)',
+  // Borders — Dark
+  borderDark: {
+    subtle: 'rgba(0, 229, 255, 0.06)',
+    default: 'rgba(0, 229, 255, 0.1)',
+    strong: 'rgba(0, 229, 255, 0.2)',
+    glow: 'rgba(0, 229, 255, 0.3)',
   },
 
-  // Overlays
-  overlay: {
-    light: 'rgba(0, 229, 255, 0.03)',
-    medium: 'rgba(0, 0, 0, 0.6)',
-    dark: 'rgba(0, 0, 0, 0.85)',
-    glass: 'rgba(10, 26, 46, 0.7)',
+  // Borders — Light
+  borderLight: {
+    subtle: 'rgba(0, 102, 255, 0.04)',
+    default: 'rgba(0, 102, 255, 0.08)',
+    strong: 'rgba(0, 102, 255, 0.15)',
   },
 
-  // Special
   white: '#FFFFFF',
-  black: '#050B14',
+  black: '#000000',
 };
 
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// SPACING (8px grid)
+// SPACING (8px grid, spacious layout)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const spacing = {
@@ -108,133 +108,155 @@ export const spacing = {
   xxl: 24,
   xxxl: 32,
   section: 40,
-  hero: 60,
+  hero: 52,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// BORDER RADIUS
+// BORDER RADIUS — Rounded XL corners
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const radius = {
-  xs: 6,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  xxl: 24,
+  xs: 8,
+  sm: 12,
+  md: 16,
+  lg: 20,
+  xl: 24,
+  xxl: 28,
+  card: 20,
+  button: 999,     // Pill buttons
+  avatar: 14,      // Rounded square avatars
   full: 999,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TYPOGRAPHY — Poppins-inspired (System font fallback)
+// TYPOGRAPHY — SF Pro / Inter style (bold modern sans-serif)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const typography = {
-  // Headers — Semibold/Bold
-  h1: { fontSize: 32, fontWeight: '700' as const, letterSpacing: -0.5 },
-  h2: { fontSize: 24, fontWeight: '600' as const, letterSpacing: -0.3 },
-  h3: { fontSize: 20, fontWeight: '600' as const },
-  h4: { fontSize: 16, fontWeight: '600' as const },
-
   // Hero
-  hero: { fontSize: 42, fontWeight: '700' as const, letterSpacing: -1 },
-  heroSub: { fontSize: 16, fontWeight: '500' as const, letterSpacing: 0.5 },
+  hero: { fontSize: 44, fontWeight: '800' as const, letterSpacing: -1.5 },
+  heroSub: { fontSize: 14, fontWeight: '400' as const, letterSpacing: 0.5 },
 
-  // Body — Regular/Medium
+  // Headers — Large bold
+  h1: { fontSize: 28, fontWeight: '800' as const, letterSpacing: -0.8 },
+  h2: { fontSize: 22, fontWeight: '700' as const, letterSpacing: -0.5 },
+  h3: { fontSize: 18, fontWeight: '700' as const, letterSpacing: -0.3 },
+  h4: { fontSize: 15, fontWeight: '700' as const, letterSpacing: -0.2 },
+
+  // Body
   body: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
   bodyMedium: { fontSize: 14, fontWeight: '500' as const, lineHeight: 20 },
-  bodySm: { fontSize: 12, fontWeight: '400' as const, lineHeight: 16 },
+  bodySm: { fontSize: 12, fontWeight: '400' as const, lineHeight: 17 },
 
-  // Labels — Semibold
+  // Labels
   label: { fontSize: 13, fontWeight: '600' as const },
-  labelSm: { fontSize: 11, fontWeight: '600' as const, letterSpacing: 0.5 },
+  labelSm: { fontSize: 10, fontWeight: '500' as const, letterSpacing: 0.8 },
 
-  // Numbers (monospace for trading data)
-  number: { fontSize: 16, fontWeight: '700' as const, fontFamily: 'monospace' },
-  numberLg: { fontSize: 24, fontWeight: '800' as const, fontFamily: 'monospace' },
-  numberSm: { fontSize: 12, fontWeight: '600' as const, fontFamily: 'monospace' },
+  // Numbers
+  number: { fontSize: 14, fontWeight: '800' as const, fontFamily: 'monospace' },
+  numberLg: { fontSize: 22, fontWeight: '800' as const, fontFamily: 'monospace' },
+  numberSm: { fontSize: 12, fontWeight: '700' as const, fontFamily: 'monospace' },
 
   // Caption
   caption: { fontSize: 10, fontWeight: '500' as const, letterSpacing: 0.3 },
 
   // Button
-  button: { fontSize: 16, fontWeight: '600' as const, letterSpacing: 0.3 },
+  button: { fontSize: 16, fontWeight: '700' as const, letterSpacing: 0.3 },
   buttonSm: { fontSize: 14, fontWeight: '600' as const },
+
+  // Nav
+  navLabel: { fontSize: 10, fontWeight: '500' as const, letterSpacing: 0.3 },
 };
 
+
 // ═══════════════════════════════════════════════════════════════════════════════
-// SHADOWS — Neon Cyan Glow
+// SHADOWS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const shadows = {
   sm: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
   },
   md: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 4,
   },
   lg: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
     elevation: 8,
   },
-  cyan: {
+  // Neon glow shadows
+  cyanGlow: {
     shadowColor: '#00E5FF',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
     elevation: 6,
   },
-  cyanStrong: {
-    shadowColor: '#00E5FF',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
+  blueGlow: {
+    shadowColor: '#0066FF',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  ctaGlow: {
+    shadowColor: '#0066FF',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 32,
     elevation: 10,
   },
-  neonBlue: {
+  // Light mode card shadow
+  cardLight: {
     shadowColor: '#0066FF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
     shadowRadius: 12,
-    elevation: 6,
+    elevation: 2,
   },
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GLASSMORPHISM STYLES
+// GLASSMORPHISM — Dark mode glass cards
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const glass = {
   card: {
-    backgroundColor: 'rgba(10, 26, 46, 0.7)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 229, 255, 0.12)',
-    borderRadius: 16,
-  },
-  cardHover: {
-    backgroundColor: 'rgba(10, 26, 46, 0.85)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 229, 255, 0.25)',
-    borderRadius: 16,
-  },
-  surface: {
-    backgroundColor: 'rgba(10, 26, 46, 0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
     borderColor: 'rgba(0, 229, 255, 0.08)',
-    borderRadius: 12,
+    borderRadius: 20,
+  },
+  cardHover: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.15)',
+    borderRadius: 20,
+  },
+  surface: {
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderRadius: 16,
+  },
+  nav: {
+    backgroundColor: 'rgba(10, 17, 32, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 229, 255, 0.06)',
   },
 };
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // NAVIGATION THEME (React Navigation)
@@ -243,58 +265,115 @@ export const glass = {
 export const navigationTheme = {
   dark: true,
   colors: {
-    primary: colors.cyan[400],
-    background: colors.bg.primary,
-    card: colors.bg.primary,
-    text: colors.text.primary,
-    border: colors.border.subtle,
-    notification: colors.cyan[400],
+    primary: colors.primary.cyan,
+    background: colors.dark.bg,
+    card: colors.dark.bg,
+    text: colors.textDark.primary,
+    border: colors.borderDark.subtle,
+    notification: colors.primary.blue,
   },
 };
 
 export const tabBarTheme = {
   tabBarStyle: {
-    backgroundColor: colors.bg.primary,
+    backgroundColor: 'rgba(10, 17, 32, 0.95)',
     borderTopWidth: 1,
-    borderTopColor: colors.border.subtle,
+    borderTopColor: 'rgba(0, 229, 255, 0.06)',
     paddingTop: 8,
-    paddingBottom: 8,
-    height: 70,
+    paddingBottom: 12,
+    height: 80,
+    position: 'absolute' as const,
   },
-  tabBarActiveTintColor: colors.cyan[400],
-  tabBarInactiveTintColor: colors.text.tertiary,
+  tabBarActiveTintColor: colors.primary.cyan,
+  tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.3)',
   tabBarLabelStyle: {
-    fontSize: 11,
-    fontWeight: '600' as const,
+    fontSize: 10,
+    fontWeight: '500' as const,
+    letterSpacing: 0.3,
     marginTop: 2,
   },
+  tabBarIconStyle: {
+    marginTop: 4,
+  },
   headerStyle: {
-    backgroundColor: colors.bg.primary,
+    backgroundColor: colors.dark.bg,
     shadowColor: 'transparent',
     elevation: 0,
   },
-  headerTintColor: colors.text.primary,
+  headerTintColor: colors.textDark.primary,
   headerTitleStyle: {
     fontWeight: '700' as const,
     fontSize: 18,
-    color: colors.cyan[400],
+    letterSpacing: -0.3,
   },
 };
 
 export const stackTheme = {
   headerStyle: {
-    backgroundColor: colors.bg.primary,
+    backgroundColor: colors.dark.bg,
     shadowColor: 'transparent',
     elevation: 0,
   },
-  headerTintColor: colors.cyan[400],
+  headerTintColor: colors.primary.cyan,
   headerTitleStyle: {
     fontWeight: '700' as const,
     fontSize: 17,
-    color: colors.text.primary,
+    color: colors.textDark.primary,
+    letterSpacing: -0.3,
   },
   headerBackTitleVisible: false,
   contentStyle: {
-    backgroundColor: colors.bg.primary,
+    backgroundColor: colors.dark.bg,
   },
 };
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACKWARD COMPATIBILITY — Old color references (used by existing screens)
+// Will be removed once all screens are fully migrated.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Re-export colors with legacy aliases so existing imports don't break
+export const legacyColors = {
+  bg: {
+    primary: colors.dark.bg,
+    secondary: colors.dark.surface,
+    tertiary: colors.dark.elevated,
+    hover: colors.dark.glassHover,
+    glass: colors.dark.glass,
+  },
+  cyan: {
+    400: colors.primary.cyan,
+    50: '#E0FBFF',
+    gradient: colors.primary.gradient,
+    glow: 'rgba(0, 229, 255, 0.3)',
+  },
+  blue: {
+    400: colors.primary.blue,
+  },
+  text: {
+    primary: colors.textDark.primary,
+    secondary: colors.textDark.secondary,
+    tertiary: colors.textDark.tertiary,
+    disabled: colors.textDark.disabled,
+    cyan: colors.primary.cyan,
+  },
+  border: {
+    subtle: colors.borderDark.subtle,
+    default: colors.borderDark.default,
+    strong: colors.borderDark.strong,
+  },
+  success: colors.success,
+  danger: colors.danger,
+  warning: colors.warning,
+  trade: colors.trade,
+};
+
+// Merge legacy into main colors export for backward compat
+Object.assign(colors, {
+  bg: legacyColors.bg,
+  cyan: legacyColors.cyan,
+  blue: legacyColors.blue,
+  text: legacyColors.text,
+  border: legacyColors.border,
+});

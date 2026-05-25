@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SniperAI — Light Mode Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: #F0F4FA;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 40px 20px;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+.phone {
+  width: 390px;
+  height: 844px;
+  background: #FFFFFF;
+  border-radius: 48px;
+  border: 2px solid rgba(0, 102, 255, 0.06);
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.06), 0 0 40px rgba(0, 102, 255, 0.03);
+}
+.phone-label {
+  text-align: center;
+  color: #0066FF;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 14px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.status-bar {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0A1120;
+  font-size: 13px;
+  font-weight: 600;
+}
+</style>
+
+<style>
+/* ═══════════ BLACK HOLE SPIRAL — LIGHT ═══════════ */
+.hero-screen {
+  height: calc(100% - 50px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 40px;
+  position: relative;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F4F8FF 50%, #EDF4FF 100%);
+}
+.blackhole-wrapper {
+  width: 240px;
+  height: 240px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+.blackhole-svg {
+  width: 240px;
+  height: 240px;
+  animation: slowSpin 40s linear infinite;
+}
+@keyframes slowSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-3px); }
+}
+.particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #0066FF;
+  opacity: 0.4;
+  animation: pulse 3s ease-in-out infinite;
+}
+.particle.sm { width: 2px; height: 2px; opacity: 0.3; }
+
+/* ═══════════ HERO TEXT & BUTTONS — LIGHT ═══════════ */
+.hero-title {
+  font-size: 44px;
+  font-weight: 800;
+  color: #0A1120;
+  letter-spacing: -1.5px;
+  margin-bottom: 8px;
+  text-align: center;
+}
+.hero-subtitle {
+  font-size: 14px;
+  font-weight: 400;
+  color: #7A8FA8;
+  letter-spacing: 0.5px;
+  margin-bottom: 52px;
+  text-align: center;
+}
+.cta-btn {
+  width: 100%;
+  max-width: 280px;
+  padding: 18px 36px;
+  background: linear-gradient(135deg, #0066FF, #00B8FF);
+  border-radius: 999px;
+  text-align: center;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  box-shadow: 0 8px 28px rgba(0, 102, 255, 0.2), 0 2px 8px rgba(0, 102, 255, 0.1);
+  margin-bottom: 16px;
+  cursor: pointer;
+  border: none;
+  animation: float 4s ease-in-out infinite;
+}
+.wallet-btn {
+  padding: 14px 32px;
+  border-radius: 999px;
+  background: rgba(0, 102, 255, 0.04);
+  border: 1px solid rgba(0, 102, 255, 0.12);
+  color: #0066FF;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+}
+
+/* ═══════════ BOTTOM NAV — LIGHT ═══════════ */
+.bottom-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(0, 102, 255, 0.06);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 16px;
+  padding-bottom: 8px;
+}
+.nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+.nav-icon {
+  font-size: 20px;
+  color: #B0BFD0;
+  transition: all 0.2s;
+}
+.nav-icon.active { color: #0066FF; }
+.nav-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #B0BFD0;
+  letter-spacing: 0.3px;
+}
+.nav-label.active { color: #0066FF; }
+.nav-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  margin-top: -30px;
+}
+.center-btn {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0066FF, #00B8FF);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(0, 102, 255, 0.3), 0 2px 8px rgba(0, 102, 255, 0.15);
+  border: 4px solid #FFFFFF;
+}
+
+/* ═══════════ FEED SCREEN — LIGHT ═══════════ */
+.feed-screen {
+  height: calc(100% - 50px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #F8FBFF;
+}
+.feed-header {
+  padding: 8px 20px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #FFFFFF;
+}
+.feed-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0A1120;
+  letter-spacing: -0.5px;
+}
+.feed-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #7A8FA8;
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00C853;
+}
+.filter-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px 16px;
+  background: #FFFFFF;
+}
+.filter-chip {
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: #F0F4FA;
+  border: 1px solid rgba(0, 102, 255, 0.06);
+  font-size: 13px;
+  font-weight: 500;
+  color: #7A8FA8;
+  cursor: pointer;
+}
+.filter-chip.active {
+  background: linear-gradient(135deg, #0066FF, #00B8FF);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.2);
+}
+
+/* ═══════════ TOKEN CARDS — LIGHT ═══════════ */
+.card-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 20px;
+  padding-bottom: 100px;
+}
+.token-card {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 102, 255, 0.05);
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.03), 0 1px 4px rgba(0, 102, 255, 0.02);
+  transition: all 0.2s;
+}
+.token-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 102, 255, 0.08);
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card-token-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.card-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: rgba(0, 102, 255, 0.04);
+  border: 1px solid rgba(0, 102, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0066FF;
+}
+.card-symbol {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0A1120;
+  letter-spacing: -0.3px;
+}
+.card-name {
+  font-size: 12px;
+  color: #7A8FA8;
+  margin-top: 2px;
+  font-weight: 400;
+}
+.card-score {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid #0066FF;
+  background: rgba(0, 102, 255, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0066FF;
+  font-family: 'Inter', monospace;
+  box-shadow: 0 0 12px rgba(0, 102, 255, 0.1);
+}
+.card-score.mid {
+  border-color: #E5A000;
+  color: #C88E00;
+  background: rgba(229, 160, 0, 0.03);
+  box-shadow: 0 0 12px rgba(229, 160, 0, 0.08);
+}
+.card-metrics {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0, 102, 255, 0.04);
+}
+.metric { text-align: center; flex: 1; }
+.metric-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #7A8FA8;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.metric-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0066FF;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+</style>
+
+</head>
+<body>
+
+<!-- ═══════════ PHONE 1: HOME HERO — LIGHT ═══════════ -->
+<div>
+  <div class="phone">
+    <div class="status-bar">9:41</div>
+    <div class="hero-screen">
+      <!-- Black Hole Spiral SVG — softer for light mode -->
+      <div class="blackhole-wrapper">
+        <svg class="blackhole-svg" viewBox="0 0 240 240" fill="none">
+          <circle cx="120" cy="120" r="110" stroke="rgba(0,102,255,0.03)" stroke-width="1"/>
+          <circle cx="120" cy="120" r="95" stroke="rgba(0,102,255,0.04)" stroke-width="0.5"/>
+          <!-- Spiral arms -->
+          <path d="M120 120 C120 80, 160 80, 160 120 C160 150, 130 160, 120 160 C100 160, 85 145, 85 120 C85 90, 105 75, 130 75 C165 75, 180 100, 180 120 C180 155, 155 180, 120 180 C80 180, 60 150, 60 120 C60 80, 90 55, 130 55 C175 55, 200 90, 200 120 C200 165, 170 200, 120 200"
+            stroke="url(#spiralGradL)" stroke-width="1.5" fill="none" opacity="0.5" stroke-linecap="round"/>
+          <path d="M120 120 C120 95, 145 90, 150 120 C155 145, 135 155, 120 155 C100 155, 90 140, 90 120 C90 95, 108 82, 130 82 C158 82, 172 102, 172 120 C172 148, 150 170, 120 170 C88 170, 68 148, 68 120 C68 85, 95 62, 130 62 C170 62, 192 92, 192 120"
+            stroke="url(#spiralGradL2)" stroke-width="1" fill="none" opacity="0.35" stroke-linecap="round"/>
+          <path d="M120 120 C118 105, 135 100, 140 118 C145 138, 130 148, 118 145 C105 142, 98 130, 100 118 C103 100, 115 90, 132 92 C152 94, 162 112, 160 128 C157 150, 140 165, 118 163 C95 160, 80 142, 82 120 C85 95, 105 78, 130 78"
+            stroke="url(#spiralGradL3)" stroke-width="0.8" fill="none" opacity="0.25" stroke-linecap="round"/>
+          <!-- Center -->
+          <circle cx="120" cy="120" r="18" fill="#EDF4FF"/>
+          <circle cx="120" cy="120" r="12" fill="#E0ECFF"/>
+          <circle cx="120" cy="120" r="5" fill="#0066FF" opacity="0.6"/>
+          <!-- Soft ring -->
+          <circle cx="120" cy="120" r="22" stroke="rgba(0,102,255,0.15)" stroke-width="1" fill="none"/>
+          <circle cx="120" cy="120" r="28" stroke="rgba(0,102,255,0.08)" stroke-width="0.5" fill="none"/>
+          <defs>
+            <linearGradient id="spiralGradL" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#0066FF" stop-opacity="0.6"/>
+              <stop offset="50%" stop-color="#00B8FF" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#0066FF" stop-opacity="0.15"/>
+            </linearGradient>
+            <linearGradient id="spiralGradL2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#00B8FF" stop-opacity="0.4"/>
+              <stop offset="100%" stop-color="#0066FF" stop-opacity="0.1"/>
+            </linearGradient>
+            <linearGradient id="spiralGradL3" x1="0%" y1="100%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#0066FF" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#00B8FF" stop-opacity="0.08"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="particle" style="top:25px; left:70px; animation-delay:0s;"></div>
+        <div class="particle" style="top:50px; right:55px; animation-delay:0.7s;"></div>
+        <div class="particle sm" style="bottom:45px; left:50px; animation-delay:1.3s;"></div>
+        <div class="particle" style="bottom:30px; right:60px; animation-delay:2s;"></div>
+        <div class="particle sm" style="top:80px; left:30px; animation-delay:2.5s;"></div>
+      </div>
+
+      <div class="hero-title">Sniper</div>
+      <div class="hero-subtitle">AI-Powered Token Intelligence</div>
+      <div class="cta-btn">⚡ Start Sniping</div>
+      <div class="wallet-btn">◈ Connect Wallet</div>
+
+      <div class="bottom-nav">
+        <div class="nav-item">
+          <div class="nav-icon active">◎</div>
+          <div class="nav-label active">Discover</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⚡</div>
+          <div class="nav-label">AI</div>
+        </div>
+        <div class="nav-center">
+          <div class="center-btn">+</div>
+          <div class="nav-label active">Snipe</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">↻</div>
+          <div class="nav-label">History</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">○</div>
+          <div class="nav-label">Profile</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="phone-label">Home — Hero (Light Mode)</div>
+</div>
+
+
+<!-- ═══════════ PHONE 2: TOKEN FEED — LIGHT ═══════════ -->
+<div>
+  <div class="phone">
+    <div class="status-bar">9:41</div>
+    <div class="feed-screen">
+      <div class="feed-header">
+        <div class="feed-title">Discover</div>
+        <div class="feed-status">
+          <div class="status-dot"></div>
+          <span>Live</span>
+        </div>
+      </div>
+      <div class="filter-row">
+        <div class="filter-chip active">All</div>
+        <div class="filter-chip">⚡ Snipe</div>
+        <div class="filter-chip">◉ Watch</div>
+        <div class="filter-chip">🔥 Hot</div>
+      </div>
+      <div class="card-list">
+        <div class="token-card">
+          <div class="card-header">
+            <div class="card-token-info">
+              <div class="card-avatar">M</div>
+              <div>
+                <div class="card-symbol">MOONCAT</div>
+                <div class="card-name">Moon Cat Protocol</div>
+              </div>
+            </div>
+            <div class="card-score">82</div>
+          </div>
+          <div class="card-metrics">
+            <div class="metric"><div class="metric-label">MC</div><div class="metric-value">24.5</div></div>
+            <div class="metric"><div class="metric-label">Vol</div><div class="metric-value">8.3</div></div>
+            <div class="metric"><div class="metric-label">Buys</div><div class="metric-value">47</div></div>
+            <div class="metric"><div class="metric-label">Age</div><div class="metric-value">2m</div></div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="card-header">
+            <div class="card-token-info">
+              <div class="card-avatar">Q</div>
+              <div>
+                <div class="card-symbol">QUANTUM</div>
+                <div class="card-name">Quantum AI</div>
+              </div>
+            </div>
+            <div class="card-score">91</div>
+          </div>
+          <div class="card-metrics">
+            <div class="metric"><div class="metric-label">MC</div><div class="metric-value">56.2</div></div>
+            <div class="metric"><div class="metric-label">Vol</div><div class="metric-value">22.1</div></div>
+            <div class="metric"><div class="metric-label">Buys</div><div class="metric-value">89</div></div>
+            <div class="metric"><div class="metric-label">Age</div><div class="metric-value">45s</div></div>
+          </div>
+        </div>
+        <div class="token-card">
+          <div class="card-header">
+            <div class="card-token-info">
+              <div class="card-avatar">S</div>
+              <div>
+                <div class="card-symbol">SOLAPE</div>
+                <div class="card-name">Solape Finance</div>
+              </div>
+            </div>
+            <div class="card-score mid">58</div>
+          </div>
+          <div class="card-metrics">
+            <div class="metric"><div class="metric-label">MC</div><div class="metric-value">12.1</div></div>
+            <div class="metric"><div class="metric-label">Vol</div><div class="metric-value">3.7</div></div>
+            <div class="metric"><div class="metric-label">Buys</div><div class="metric-value">19</div></div>
+            <div class="metric"><div class="metric-label">Age</div><div class="metric-value">5m</div></div>
+          </div>
+        </div>
+      </div>
+      <div class="bottom-nav">
+        <div class="nav-item">
+          <div class="nav-icon active">◎</div>
+          <div class="nav-label active">Discover</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">⚡</div>
+          <div class="nav-label">AI</div>
+        </div>
+        <div class="nav-center">
+          <div class="center-btn">+</div>
+          <div class="nav-label active">Snipe</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">↻</div>
+          <div class="nav-label">History</div>
+        </div>
+        <div class="nav-item">
+          <div class="nav-icon">○</div>
+          <div class="nav-label">Profile</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="phone-label">Feed — Token Cards (Light Mode)</div>
+</div>
+
+</body>
+</html>

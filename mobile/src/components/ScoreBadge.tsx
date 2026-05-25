@@ -1,11 +1,13 @@
 /**
- * ScoreBadge — Neon score indicator with cyan glow for high scores
- * Electric Cyan style: circular badge with gradient border feel, neon glow
+ * ScoreBadge — Neon score indicator
+ * 
+ * Circular badge with cyan glow for high scores,
+ * clean minimal style matching premium fintech aesthetic.
  */
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, typography, shadows } from '../theme';
+import { colors, typography } from '../theme';
 
 interface Props {
   score: number;
@@ -15,68 +17,52 @@ interface Props {
 
 export default function ScoreBadge({ score, decision, size = 'md' }: Props) {
   const getColor = () => {
-    if (score >= 70) return colors.cyan[400];
+    if (score >= 70) return colors.primary.cyan;
     if (score >= 50) return colors.warning;
     return colors.danger;
   };
 
-  const getLabel = () => {
-    if (decision === 'SNIPE') return 'SNIPE';
-    if (decision === 'WATCH') return 'WATCH';
-    return 'SKIP';
-  };
-
   const badgeColor = getColor();
   const sizeMultiplier = size === 'lg' ? 1.4 : size === 'sm' ? 0.8 : 1;
-  const badgeSize = 46 * sizeMultiplier;
+  const badgeSize = 44 * sizeMultiplier;
   const isHighScore = score >= 70;
 
   return (
-    <View style={styles.container}>
-      <View
+    <View
+      style={[
+        styles.badge,
+        {
+          width: badgeSize,
+          height: badgeSize,
+          borderRadius: badgeSize / 2,
+          borderColor: badgeColor,
+          backgroundColor: `${badgeColor}10`,
+        },
+        isHighScore && {
+          shadowColor: badgeColor,
+          shadowOffset: { width: 0, height: 0 },
+          shadowOpacity: 0.4,
+          shadowRadius: 12,
+          elevation: 4,
+        },
+      ]}
+    >
+      <Text
         style={[
-          styles.badge,
+          styles.score,
           {
-            width: badgeSize,
-            height: badgeSize,
-            borderRadius: badgeSize / 2,
-            borderColor: badgeColor,
-            backgroundColor: `${badgeColor}12`,
-          },
-          isHighScore && {
-            shadowColor: badgeColor,
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.5,
-            shadowRadius: 8,
-            elevation: 4,
+            color: badgeColor,
+            fontSize: 14 * sizeMultiplier,
           },
         ]}
       >
-        <Text
-          style={[
-            styles.score,
-            {
-              color: badgeColor,
-              fontSize: 15 * sizeMultiplier,
-            },
-          ]}
-        >
-          {score}
-        </Text>
-      </View>
-      {size !== 'sm' && (
-        <Text style={[styles.label, { color: badgeColor }]}>
-          {getLabel()}
-        </Text>
-      )}
+        {score}
+      </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-  },
   badge: {
     borderWidth: 2,
     alignItems: 'center',
@@ -85,12 +71,5 @@ const styles = StyleSheet.create({
   score: {
     fontWeight: '800',
     fontFamily: 'monospace',
-  },
-  label: {
-    ...typography.caption,
-    marginTop: 4,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
   },
 });
