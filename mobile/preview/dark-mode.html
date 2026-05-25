@@ -6,549 +6,121 @@
 <title>SniperAI — Dark Mode Preview</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: 'Inter', -apple-system, sans-serif;
-  background: #060A12;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  min-height: 100vh;
-  padding: 40px 20px;
-  gap: 40px;
-  flex-wrap: wrap;
-}
-.phone {
-  width: 390px;
-  height: 844px;
-  background: #0A1120;
-  border-radius: 48px;
-  border: 2px solid rgba(0, 229, 255, 0.08);
-  overflow: hidden;
-  position: relative;
-  box-shadow: 0 0 80px rgba(0, 229, 255, 0.05), 0 30px 80px rgba(0,0,0,0.6);
-}
-.phone-label {
-  text-align: center;
-  color: #00E5FF;
-  font-size: 13px;
-  font-weight: 600;
-  margin-top: 14px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-.status-bar {
-  height: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:#060A12;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:40px 20px;gap:40px;flex-wrap:wrap}
+.phone{width:390px;height:844px;background:#0A1120;border-radius:48px;border:2px solid rgba(0,229,255,0.08);overflow:hidden;position:relative;box-shadow:0 0 80px rgba(0,229,255,0.05),0 30px 80px rgba(0,0,0,0.6)}
+.phone-label{text-align:center;color:#00E5FF;font-size:13px;font-weight:600;margin-top:14px;letter-spacing:1.5px;text-transform:uppercase}
+.status-bar{height:50px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600}
+.hero-screen{height:calc(100% - 50px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 40px;position:relative;background:radial-gradient(ellipse at center,rgba(0,102,255,0.03) 0%,transparent 70%)}
+.bh-wrap{width:240px;height:240px;position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:40px}
+.bh-svg{width:240px;height:240px;animation:spin 40s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.dot{position:absolute;width:3px;height:3px;border-radius:50%;background:#00E5FF;animation:pulse 3s ease-in-out infinite}
+.dot.sm{width:2px;height:2px;opacity:.5}
+.hero-title{font-size:44px;font-weight:800;color:#FFF;letter-spacing:-1.5px;margin-bottom:8px;text-align:center}
+.hero-sub{font-size:14px;font-weight:400;color:rgba(255,255,255,0.4);letter-spacing:.5px;margin-bottom:52px;text-align:center}
+.cta{width:100%;max-width:280px;padding:18px 36px;background:linear-gradient(135deg,#0066FF,#00E5FF);border-radius:999px;text-align:center;color:#fff;font-size:16px;font-weight:700;box-shadow:0 8px 32px rgba(0,102,255,0.35),0 0 20px rgba(0,229,255,0.15);margin-bottom:16px;border:none;animation:float 4s ease-in-out infinite}
+.wallet{padding:14px 32px;border-radius:999px;background:rgba(255,255,255,0.03);border:1px solid rgba(0,229,255,0.2);color:rgba(0,229,255,0.9);font-size:14px;font-weight:500;backdrop-filter:blur(10px)}
+.nav{position:absolute;bottom:0;left:0;right:0;height:80px;background:rgba(10,17,32,0.95);backdrop-filter:blur(20px);border-top:1px solid rgba(0,229,255,0.06);display:flex;align-items:center;justify-content:space-around;padding:0 16px 8px}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.nav-icon{font-size:20px;color:rgba(255,255,255,0.3)}
+.nav-icon.on{color:#00E5FF}
+.nav-lbl{font-size:10px;font-weight:500;color:rgba(255,255,255,0.3);letter-spacing:.3px}
+.nav-lbl.on{color:#00E5FF}
+.nav-ctr{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;margin-top:-30px}
+.ctr-btn{width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,#0066FF,#00E5FF);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;box-shadow:0 4px 20px rgba(0,229,255,0.4),0 0 40px rgba(0,229,255,0.15);border:3px solid rgba(10,17,32,0.9)}
+.feed{height:calc(100% - 50px);display:flex;flex-direction:column;overflow:hidden}
+.feed-hdr{padding:8px 20px 16px;display:flex;justify-content:space-between;align-items:center}
+.feed-title{font-size:22px;font-weight:700;color:#FFF;letter-spacing:-.5px}
+.live{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,0.4)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#00E676;box-shadow:0 0 6px #00E676}
+.chips{display:flex;gap:8px;padding:0 20px 16px}
+.chip{padding:8px 18px;border-radius:999px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);font-size:13px;font-weight:500;color:rgba(255,255,255,0.4)}
+.chip.on{background:linear-gradient(135deg,#0066FF,#00B8FF);border-color:transparent;color:#fff;font-weight:600;box-shadow:0 4px 16px rgba(0,102,255,0.3)}
+.cards{flex:1;overflow-y:auto;padding:0 20px 100px}
+.card{background:rgba(255,255,255,0.03);border:1px solid rgba(0,229,255,0.08);border-radius:20px;padding:18px;margin-bottom:12px;backdrop-filter:blur(12px)}
+.card:hover{border-color:rgba(0,229,255,0.15);background:rgba(255,255,255,0.05)}
+.card-top{display:flex;justify-content:space-between;align-items:center}
+.card-info{display:flex;align-items:center;gap:12px}
+.card-av{width:44px;height:44px;border-radius:14px;background:rgba(0,102,255,0.08);border:1px solid rgba(0,102,255,0.15);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;color:#00B8FF}
+.card-sym{font-size:15px;font-weight:700;color:#fff;letter-spacing:-.3px}
+.card-name{font-size:12px;color:rgba(255,255,255,0.35);margin-top:2px}
+.score{width:44px;height:44px;border-radius:50%;border:2px solid #00E5FF;background:rgba(0,229,255,0.06);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#00E5FF;font-family:monospace;box-shadow:0 0 16px rgba(0,229,255,0.25)}
+.score.mid{border-color:#FFB800;color:#FFB800;background:rgba(255,184,0,0.06);box-shadow:0 0 16px rgba(255,184,0,0.2)}
+.metrics{display:flex;justify-content:space-between;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.04)}
+.met{text-align:center;flex:1}
+.met-l{font-size:10px;font-weight:500;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:.8px}
+.met-v{font-size:13px;font-weight:600;color:rgba(0,229,255,0.8);margin-top:4px}
 </style>
-
-<style>
-/* ═══════════ BLACK HOLE SPIRAL ═══════════ */
-.hero-screen {
-  height: calc(100% - 50px);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0 40px;
-  position: relative;
-  background: radial-gradient(ellipse at center, rgba(0, 102, 255, 0.03) 0%, transparent 70%);
-}
-.blackhole-wrapper {
-  width: 240px;
-  height: 240px;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 40px;
-}
-/* SVG spiral will be inline */
-.blackhole-svg {
-  width: 240px;
-  height: 240px;
-  animation: slowSpin 40s linear infinite;
-}
-@keyframes slowSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-@keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 1; }
-}
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-3px); }
-}
-.particle {
-  position: absolute;
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #00E5FF;
-  animation: pulse 3s ease-in-out infinite;
-}
-.particle.sm { width: 2px; height: 2px; opacity: 0.5; }
-
-/* ═══════════ HERO TEXT & BUTTONS ═══════════ */
-.hero-title {
-  font-size: 44px;
-  font-weight: 800;
-  color: #FFFFFF;
-  letter-spacing: -1.5px;
-  margin-bottom: 8px;
-  text-align: center;
-}
-.hero-subtitle {
-  font-size: 14px;
-  font-weight: 400;
-  color: rgba(255,255,255,0.4);
-  letter-spacing: 0.5px;
-  margin-bottom: 52px;
-  text-align: center;
-}
-.cta-btn {
-  width: 100%;
-  max-width: 280px;
-  padding: 18px 36px;
-  background: linear-gradient(135deg, #0066FF, #00E5FF);
-  border-radius: 999px;
-  text-align: center;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  box-shadow: 0 8px 32px rgba(0, 102, 255, 0.35), 0 0 20px rgba(0, 229, 255, 0.15);
-  margin-bottom: 16px;
-  cursor: pointer;
-  border: none;
-  animation: float 4s ease-in-out infinite;
-}
-.wallet-btn {
-  padding: 14px 32px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(0, 229, 255, 0.2);
-  color: rgba(0, 229, 255, 0.9);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-  letter-spacing: 0.3px;
-}
-
-/* ═══════════ BOTTOM NAV — 5 tabs with floating center ═══════════ */
-.bottom-nav {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background: rgba(10, 17, 32, 0.95);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(0, 229, 255, 0.06);
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-around;
-  padding: 0 16px;
-  padding-bottom: 8px;
-}
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
-}
-.nav-icon {
-  font-size: 20px;
-  color: rgba(255,255,255,0.3);
-  transition: all 0.2s;
-}
-.nav-icon.active { color: #00E5FF; }
-.nav-label {
-  font-size: 10px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.3);
-  letter-spacing: 0.3px;
-}
-.nav-label.active { color: #00E5FF; }
-
-/* Floating center button */
-.nav-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
-  margin-top: -30px;
-}
-.center-btn {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0066FF, #00E5FF);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 24px;
-  color: #fff;
-  box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4), 0 0 40px rgba(0, 229, 255, 0.15);
-  border: 3px solid rgba(10, 17, 32, 0.9);
-}
-
-/* ═══════════ FEED SCREEN ═══════════ */
-.feed-screen {
-  height: calc(100% - 50px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.feed-header {
-  padding: 8px 20px 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.feed-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #FFFFFF;
-  letter-spacing: -0.5px;
-}
-.feed-status {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: rgba(255,255,255,0.4);
-}
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #00E676;
-  box-shadow: 0 0 6px #00E676;
-}
-.filter-row {
-  display: flex;
-  gap: 8px;
-  padding: 0 20px 16px;
-}
-.filter-chip {
-  padding: 8px 18px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.4);
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-}
-.filter-chip.active {
-  background: linear-gradient(135deg, #0066FF, #00B8FF);
-  border-color: transparent;
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 4px 16px rgba(0, 102, 255, 0.3);
-}
-
-/* ═══════════ TOKEN CARDS — Glassmorphism ═══════════ */
-.card-list {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 20px;
-  padding-bottom: 100px;
-}
-.token-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(0, 229, 255, 0.08);
-  border-radius: 20px;
-  padding: 18px;
-  margin-bottom: 12px;
-  backdrop-filter: blur(12px);
-  transition: all 0.2s;
-}
-.token-card:hover {
-  border-color: rgba(0, 229, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
-}
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.card-token-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.card-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: rgba(0, 102, 255, 0.08);
-  border: 1px solid rgba(0, 102, 255, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 17px;
-  font-weight: 700;
-  color: #00B8FF;
-}
-.card-symbol {
-  font-size: 15px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.3px;
-}
-.card-name {
-  font-size: 12px;
-  color: rgba(255,255,255,0.35);
-  margin-top: 2px;
-  font-weight: 400;
-}
-.card-score {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 2px solid #00E5FF;
-  background: rgba(0, 229, 255, 0.06);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 800;
-  color: #00E5FF;
-  font-family: 'Inter', monospace;
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
-}
-.card-score.mid {
-  border-color: #FFB800;
-  color: #FFB800;
-  background: rgba(255, 184, 0, 0.06);
-  box-shadow: 0 0 16px rgba(255, 184, 0, 0.2);
-}
-.card-metrics {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid rgba(255,255,255,0.04);
-}
-.metric { text-align: center; flex: 1; }
-.metric-label {
-  font-size: 10px;
-  font-weight: 500;
-  color: rgba(255,255,255,0.3);
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-}
-.metric-value {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(0, 229, 255, 0.8);
-  margin-top: 4px;
-}
-</style>
-
 </head>
 <body>
 
-<!-- ═══════════ PHONE 1: HOME HERO — DARK ═══════════ -->
 <div>
-  <div class="phone">
-    <div class="status-bar">9:41</div>
-    <div class="hero-screen">
-      <!-- Black Hole Spiral SVG -->
-      <div class="blackhole-wrapper">
-        <svg class="blackhole-svg" viewBox="0 0 240 240" fill="none">
-          <!-- Outer glow -->
-          <circle cx="120" cy="120" r="110" stroke="rgba(0,229,255,0.03)" stroke-width="1"/>
-          <circle cx="120" cy="120" r="95" stroke="rgba(0,229,255,0.05)" stroke-width="0.5"/>
-          <!-- Spiral arms (thin vortex) -->
-          <path d="M120 120 C120 80, 160 80, 160 120 C160 150, 130 160, 120 160 C100 160, 85 145, 85 120 C85 90, 105 75, 130 75 C165 75, 180 100, 180 120 C180 155, 155 180, 120 180 C80 180, 60 150, 60 120 C60 80, 90 55, 130 55 C175 55, 200 90, 200 120 C200 165, 170 200, 120 200" 
-            stroke="url(#spiralGrad)" stroke-width="1.2" fill="none" opacity="0.7" stroke-linecap="round"/>
-          <path d="M120 120 C120 95, 145 90, 150 120 C155 145, 135 155, 120 155 C100 155, 90 140, 90 120 C90 95, 108 82, 130 82 C158 82, 172 102, 172 120 C172 148, 150 170, 120 170 C88 170, 68 148, 68 120 C68 85, 95 62, 130 62 C170 62, 192 92, 192 120"
-            stroke="url(#spiralGrad2)" stroke-width="0.8" fill="none" opacity="0.5" stroke-linecap="round"/>
-          <path d="M120 120 C118 105, 135 100, 140 118 C145 138, 130 148, 118 145 C105 142, 98 130, 100 118 C103 100, 115 90, 132 92 C152 94, 162 112, 160 128 C157 150, 140 165, 118 163 C95 160, 80 142, 82 120 C85 95, 105 78, 130 78"
-            stroke="url(#spiralGrad3)" stroke-width="0.6" fill="none" opacity="0.35" stroke-linecap="round"/>
-          <!-- Center black void -->
-          <circle cx="120" cy="120" r="18" fill="#0A1120"/>
-          <circle cx="120" cy="120" r="12" fill="#050810"/>
-          <circle cx="120" cy="120" r="5" fill="#000"/>
-          <!-- Glow ring around center -->
-          <circle cx="120" cy="120" r="22" stroke="rgba(0,229,255,0.3)" stroke-width="0.8" fill="none"/>
-          <circle cx="120" cy="120" r="28" stroke="rgba(0,229,255,0.12)" stroke-width="0.5" fill="none"/>
-          <!-- Gradients -->
-          <defs>
-            <linearGradient id="spiralGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stop-color="#0066FF" stop-opacity="0.8"/>
-              <stop offset="50%" stop-color="#00E5FF" stop-opacity="0.6"/>
-              <stop offset="100%" stop-color="#00B8FF" stop-opacity="0.2"/>
-            </linearGradient>
-            <linearGradient id="spiralGrad2" x1="100%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.6"/>
-              <stop offset="100%" stop-color="#0066FF" stop-opacity="0.1"/>
-            </linearGradient>
-            <linearGradient id="spiralGrad3" x1="0%" y1="100%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#00B8FF" stop-opacity="0.5"/>
-              <stop offset="100%" stop-color="#0066FF" stop-opacity="0.1"/>
-            </linearGradient>
-          </defs>
-        </svg>
-        <!-- Particles -->
-        <div class="particle" style="top:25px; left:70px; animation-delay:0s;"></div>
-        <div class="particle" style="top:50px; right:55px; animation-delay:0.7s;"></div>
-        <div class="particle sm" style="bottom:45px; left:50px; animation-delay:1.3s;"></div>
-        <div class="particle" style="bottom:30px; right:60px; animation-delay:2s;"></div>
-        <div class="particle sm" style="top:80px; left:30px; animation-delay:2.5s;"></div>
-        <div class="particle sm" style="top:35px; right:85px; animation-delay:1.8s;"></div>
-      </div>
-
-      <div class="hero-title">Sniper</div>
-      <div class="hero-subtitle">AI-Powered Token Intelligence</div>
-      <div class="cta-btn">⚡ Start Sniping</div>
-      <div class="wallet-btn">◈ Connect Wallet</div>
-
-      <!-- Bottom Nav with Floating Center -->
-      <div class="bottom-nav">
-        <div class="nav-item">
-          <div class="nav-icon active">◎</div>
-          <div class="nav-label active">Discover</div>
-        </div>
-        <div class="nav-item">
-          <div class="nav-icon">⚡</div>
-          <div class="nav-label">AI</div>
-        </div>
-        <div class="nav-center">
-          <div class="center-btn">+</div>
-          <div class="nav-label active">Snipe</div>
-        </div>
-        <div class="nav-item">
-          <div class="nav-icon">↻</div>
-          <div class="nav-label">History</div>
-        </div>
-        <div class="nav-item">
-          <div class="nav-icon">○</div>
-          <div class="nav-label">Profile</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="phone-label">Home — Hero (Dark Mode)</div>
+<div class="phone">
+<div class="status-bar">9:41</div>
+<div class="hero-screen">
+<div class="bh-wrap">
+<svg class="bh-svg" viewBox="0 0 240 240" fill="none">
+<circle cx="120" cy="120" r="110" stroke="rgba(0,229,255,0.03)" stroke-width="1"/>
+<circle cx="120" cy="120" r="95" stroke="rgba(0,229,255,0.05)" stroke-width=".5"/>
+<path d="M120 120C120 80,160 80,160 120C160 150,130 160,120 160C100 160,85 145,85 120C85 90,105 75,130 75C165 75,180 100,180 120C180 155,155 180,120 180C80 180,60 150,60 120C60 80,90 55,130 55C175 55,200 90,200 120C200 165,170 200,120 200" stroke="url(#g1)" stroke-width="1.2" fill="none" opacity=".7" stroke-linecap="round"/>
+<path d="M120 120C120 95,145 90,150 120C155 145,135 155,120 155C100 155,90 140,90 120C90 95,108 82,130 82C158 82,172 102,172 120C172 148,150 170,120 170C88 170,68 148,68 120C68 85,95 62,130 62C170 62,192 92,192 120" stroke="url(#g2)" stroke-width=".8" fill="none" opacity=".5" stroke-linecap="round"/>
+<path d="M120 120C118 105,135 100,140 118C145 138,130 148,118 145C105 142,98 130,100 118C103 100,115 90,132 92C152 94,162 112,160 128C157 150,140 165,118 163C95 160,80 142,82 120C85 95,105 78,130 78" stroke="url(#g3)" stroke-width=".6" fill="none" opacity=".35" stroke-linecap="round"/>
+<circle cx="120" cy="120" r="18" fill="#0A1120"/><circle cx="120" cy="120" r="12" fill="#050810"/><circle cx="120" cy="120" r="5" fill="#000"/>
+<circle cx="120" cy="120" r="22" stroke="rgba(0,229,255,0.3)" stroke-width=".8" fill="none"/>
+<circle cx="120" cy="120" r="28" stroke="rgba(0,229,255,0.12)" stroke-width=".5" fill="none"/>
+<defs>
+<linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#0066FF" stop-opacity=".8"/><stop offset="50%" stop-color="#00E5FF" stop-opacity=".6"/><stop offset="100%" stop-color="#00B8FF" stop-opacity=".2"/></linearGradient>
+<linearGradient id="g2" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#00E5FF" stop-opacity=".6"/><stop offset="100%" stop-color="#0066FF" stop-opacity=".1"/></linearGradient>
+<linearGradient id="g3" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#00B8FF" stop-opacity=".5"/><stop offset="100%" stop-color="#0066FF" stop-opacity=".1"/></linearGradient>
+</defs>
+</svg>
+<div class="dot" style="top:25px;left:70px"></div>
+<div class="dot" style="top:50px;right:55px;animation-delay:.7s"></div>
+<div class="dot sm" style="bottom:45px;left:50px;animation-delay:1.3s"></div>
+<div class="dot" style="bottom:30px;right:60px;animation-delay:2s"></div>
+<div class="dot sm" style="top:80px;left:30px;animation-delay:2.5s"></div>
+<div class="dot sm" style="top:35px;right:85px;animation-delay:1.8s"></div>
+</div>
+<div class="hero-title">Sniper</div>
+<div class="hero-sub">AI-Powered Token Intelligence</div>
+<div class="cta">⚡ Start Sniping</div>
+<div class="wallet">◈ Connect Wallet</div>
+<div class="nav">
+<div class="nav-item"><div class="nav-icon on">◎</div><div class="nav-lbl on">Discover</div></div>
+<div class="nav-item"><div class="nav-icon">⚡</div><div class="nav-lbl">AI</div></div>
+<div class="nav-ctr"><div class="ctr-btn">+</div><div class="nav-lbl on">Snipe</div></div>
+<div class="nav-item"><div class="nav-icon">↻</div><div class="nav-lbl">History</div></div>
+<div class="nav-item"><div class="nav-icon">○</div><div class="nav-lbl">Profile</div></div>
+</div>
+</div>
+</div>
+<div class="phone-label">Home — Hero (Dark)</div>
 </div>
 
-<!-- ═══════════ PHONE 2: TOKEN FEED — DARK ═══════════ -->
 <div>
-  <div class="phone">
-    <div class="status-bar">9:41</div>
-    <div class="feed-screen">
-      <div class="feed-header">
-        <div class="feed-title">Discover</div>
-        <div class="feed-status">
-          <div class="status-dot"></div>
-          <span>Live</span>
-        </div>
-      </div>
-      <div class="filter-row">
-        <div class="filter-chip active">All</div>
-        <div class="filter-chip">⚡ Snipe</div>
-        <div class="filter-chip">◉ Watch</div>
-        <div class="filter-chip">🔥 Hot</div>
-      </div>
-      <div class="card-list">
-        <div class="token-card">
-          <div class="card-header">
-            <div class="card-token-info">
-              <div class="card-avatar">M</div>
-              <div>
-                <div class="card-symbol">MOONCAT</div>
-                <div class="card-name">Moon Cat Protocol</div>
-              </div>
-            </div>
-            <div class="card-score">82</div>
-          </div>
-          <div class="card-metrics">
-            <div class="metric"><div class="metric-label">MC</div><div class="metric-value">24.5</div></div>
-            <div class="metric"><div class="metric-label">Vol</div><div class="metric-value">8.3</div></div>
-            <div class="metric"><div class="metric-label">Buys</div><div class="metric-value">47</div></div>
-            <div class="metric"><div class="metric-label">Age</div><div class="metric-value">2m</div></div>
-          </div>
-        </div>
-        <div class="token-card">
-          <div class="card-header">
-            <div class="card-token-info">
-              <div class="card-avatar">Q</div>
-              <div>
-                <div class="card-symbol">QUANTUM</div>
-                <div class="card-name">Quantum AI</div>
-              </div>
-            </div>
-            <div class="card-score">91</div>
-          </div>
-          <div class="card-metrics">
-            <div class="metric"><div class="metric-label">MC</div><div class="metric-value">56.2</div></div>
-            <div class="metric"><div class="metric-label">Vol</div><div class="metric-value">22.1</div></div>
-            <div class="metric"><div class="metric-label">Buys</div><div class="metric-value">89</div></div>
-            <div class="metric"><div class="metric-label">Age</div><div class="metric-value">45s</div></div>
-          </div>
-        </div>
-
-        <div class="token-card">
-          <div class="card-header">
-            <div class="card-token-info">
-              <div class="card-avatar">S</div>
-              <div>
-                <div class="card-symbol">SOLAPE</div>
-                <div class="card-name">Solape Finance</div>
-              </div>
-            </div>
-            <div class="card-score mid">58</div>
-          </div>
-          <div class="card-metrics">
-            <div class="metric"><div class="metric-label">MC</div><div class="metric-value">12.1</div></div>
-            <div class="metric"><div class="metric-label">Vol</div><div class="metric-value">3.7</div></div>
-            <div class="metric"><div class="metric-label">Buys</div><div class="metric-value">19</div></div>
-            <div class="metric"><div class="metric-label">Age</div><div class="metric-value">5m</div></div>
-          </div>
-        </div>
-      </div>
-      <!-- Bottom Nav -->
-      <div class="bottom-nav">
-        <div class="nav-item">
-          <div class="nav-icon active">◎</div>
-          <div class="nav-label active">Discover</div>
-        </div>
-        <div class="nav-item">
-          <div class="nav-icon">⚡</div>
-          <div class="nav-label">AI</div>
-        </div>
-        <div class="nav-center">
-          <div class="center-btn">+</div>
-          <div class="nav-label active">Snipe</div>
-        </div>
-        <div class="nav-item">
-          <div class="nav-icon">↻</div>
-          <div class="nav-label">History</div>
-        </div>
-        <div class="nav-item">
-          <div class="nav-icon">○</div>
-          <div class="nav-label">Profile</div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div class="phone-label">Feed — Token Cards (Dark Mode)</div>
+<div class="phone">
+<div class="status-bar">9:41</div>
+<div class="feed">
+<div class="feed-hdr"><div class="feed-title">Discover</div><div class="live"><div class="live-dot"></div>Live</div></div>
+<div class="chips"><div class="chip on">All</div><div class="chip">⚡ Snipe</div><div class="chip">◉ Watch</div><div class="chip">🔥 Hot</div></div>
+<div class="cards">
+<div class="card"><div class="card-top"><div class="card-info"><div class="card-av">M</div><div><div class="card-sym">MOONCAT</div><div class="card-name">Moon Cat Protocol</div></div></div><div class="score">82</div></div><div class="metrics"><div class="met"><div class="met-l">MC</div><div class="met-v">24.5</div></div><div class="met"><div class="met-l">Vol</div><div class="met-v">8.3</div></div><div class="met"><div class="met-l">Buys</div><div class="met-v">47</div></div><div class="met"><div class="met-l">Age</div><div class="met-v">2m</div></div></div></div>
+<div class="card"><div class="card-top"><div class="card-info"><div class="card-av">Q</div><div><div class="card-sym">QUANTUM</div><div class="card-name">Quantum AI</div></div></div><div class="score">91</div></div><div class="metrics"><div class="met"><div class="met-l">MC</div><div class="met-v">56.2</div></div><div class="met"><div class="met-l">Vol</div><div class="met-v">22.1</div></div><div class="met"><div class="met-l">Buys</div><div class="met-v">89</div></div><div class="met"><div class="met-l">Age</div><div class="met-v">45s</div></div></div></div>
+<div class="card"><div class="card-top"><div class="card-info"><div class="card-av">S</div><div><div class="card-sym">SOLAPE</div><div class="card-name">Solape Finance</div></div></div><div class="score mid">58</div></div><div class="metrics"><div class="met"><div class="met-l">MC</div><div class="met-v">12.1</div></div><div class="met"><div class="met-l">Vol</div><div class="met-v">3.7</div></div><div class="met"><div class="met-l">Buys</div><div class="met-v">19</div></div><div class="met"><div class="met-l">Age</div><div class="met-v">5m</div></div></div></div>
+</div>
+<div class="nav">
+<div class="nav-item"><div class="nav-icon on">◎</div><div class="nav-lbl on">Discover</div></div>
+<div class="nav-item"><div class="nav-icon">⚡</div><div class="nav-lbl">AI</div></div>
+<div class="nav-ctr"><div class="ctr-btn">+</div><div class="nav-lbl on">Snipe</div></div>
+<div class="nav-item"><div class="nav-icon">↻</div><div class="nav-lbl">History</div></div>
+<div class="nav-item"><div class="nav-icon">○</div><div class="nav-lbl">Profile</div></div>
+</div>
+</div>
+</div>
+<div class="phone-label">Feed — Token Cards (Dark)</div>
 </div>
 
 </body>
