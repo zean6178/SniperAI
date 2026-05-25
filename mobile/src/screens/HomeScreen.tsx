@@ -1,17 +1,18 @@
 /**
- * HomeScreen — Futuristic landing with Black Hole hero + Token Discovery Feed
+ * HomeScreen — Hero with spiral black hole + Token Discovery Feed
  * 
- * Electric Cyan style: black hole animation center, large "Sniper" title,
- * primary CTA gradient button, secondary wallet button, bottom navigation.
- * Sci-fi operating system feel with neon cyan glow.
+ * Electric Cyan v2: SVG spiral vortex (thin layered paths),
+ * floating CTA, glassmorphism feed cards, premium minimal layout.
+ * Deep space aesthetic, quantum portal branding.
  */
 
 import React, { useState } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity,
-  Animated, Dimensions,
+  View, Text, FlatList, StyleSheet, RefreshControl,
+  TouchableOpacity, Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle, Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import TokenCard from '../components/TokenCard';
 import { useTokenFeed } from '../hooks/useTokenFeed';
 import { colors, spacing, radius, typography, shadows, glass } from '../theme';
@@ -31,90 +32,29 @@ export default function HomeScreen({ navigation }: any) {
     return true;
   });
 
-  const HeroSection = () => (
-    <View style={styles.heroContainer}>
-      {/* Black Hole Visual */}
-      <View style={styles.blackHoleContainer}>
-        {/* Outer orbit rings */}
-        <View style={[styles.orbitRing, styles.orbitRing3]} />
-        <View style={[styles.orbitRing, styles.orbitRing2]} />
-        <View style={[styles.orbitRing, styles.orbitRing1]} />
-        
-        {/* Core glow */}
-        <View style={styles.blackHoleCore}>
-          <View style={styles.blackHoleInner}>
-            <View style={styles.blackHoleDot} />
-          </View>
-        </View>
-
-        {/* Particle dots */}
-        <View style={[styles.particle, { top: 30, left: 60 }]} />
-        <View style={[styles.particle, { top: 45, right: 50 }]} />
-        <View style={[styles.particle, { bottom: 40, left: 45 }]} />
-        <View style={[styles.particle, { bottom: 25, right: 65 }]} />
-        <View style={[styles.particleSm, { top: 20, right: 80 }]} />
-        <View style={[styles.particleSm, { bottom: 55, left: 80 }]} />
-      </View>
-
-      {/* Title */}
-      <Text style={styles.heroTitle}>Sniper</Text>
-      <Text style={styles.heroSubtitle}>AI-Powered Token Intelligence</Text>
-
-      {/* Primary CTA Button */}
-      <TouchableOpacity
-        style={styles.ctaButton}
-        onPress={() => setShowHero(false)}
-        activeOpacity={0.85}
-      >
-        <LinearGradient
-          colors={['#0066FF', '#00E5FF']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.ctaGradient}
-        >
-          <Text style={styles.ctaText}>⚡ Start Sniping</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-
-      {/* Secondary Wallet Button */}
-      <TouchableOpacity
-        style={styles.walletButton}
-        onPress={() => navigation.navigate('Settings')}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.walletButtonIcon}>◈</Text>
-        <Text style={styles.walletButtonText}>Connect Wallet</Text>
-      </TouchableOpacity>
-    </View>
-  );
-
   if (showHero && tokens.length === 0) {
     return (
       <View style={styles.container}>
-        <HeroSection />
+        <HeroSection onStart={() => setShowHero(false)} navigation={navigation} />
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      {/* Status indicator */}
-      <View style={styles.statusBar}>
-        <View style={styles.statusLeft}>
-          <View style={[styles.dot, { backgroundColor: isConnected ? colors.success : colors.danger }]} />
-          <Text style={styles.statusText}>
-            {isConnected ? 'Live Feed' : 'Offline'}
-          </Text>
-        </View>
-        <View style={styles.statusRight}>
-          <Text style={styles.countText}>{tokens.length} tokens</Text>
+      {/* Header */}
+      <View style={styles.feedHeader}>
+        <Text style={styles.feedTitle}>Discover</Text>
+        <View style={styles.liveIndicator}>
+          <View style={[styles.liveDot, { backgroundColor: isConnected ? colors.success : colors.danger }]} />
+          <Text style={styles.liveText}>{isConnected ? 'Live' : 'Offline'}</Text>
         </View>
       </View>
 
       {/* Filter chips */}
       <View style={styles.filterRow}>
         {([
-          { key: 'all', label: '◎ All' },
+          { key: 'all', label: 'All' },
           { key: 'snipe', label: '⚡ Snipe' },
           { key: 'watch', label: '◉ Watch' },
         ] as const).map(({ key, label }) => (
@@ -126,10 +66,10 @@ export default function HomeScreen({ navigation }: any) {
           >
             {filter === key ? (
               <LinearGradient
-                colors={['#0066FF', '#00E5FF']}
+                colors={['#0066FF', '#00B8FF']}
                 start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.filterChipGradient}
+                end={{ x: 1, y: 1 }}
+                style={styles.filterGradient}
               >
                 <Text style={styles.filterTextActive}>{label}</Text>
               </LinearGradient>
@@ -154,23 +94,11 @@ export default function HomeScreen({ navigation }: any) {
           <RefreshControl
             refreshing={isLoading}
             onRefresh={refresh}
-            tintColor={colors.cyan[400]}
-            colors={[colors.cyan[400]]}
+            tintColor={colors.primary.cyan}
+            colors={[colors.primary.cyan]}
           />
         }
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <View style={styles.emptyIconContainer}>
-              <Text style={styles.emptyIcon}>◎</Text>
-            </View>
-            <Text style={styles.emptyTitle}>
-              {isLoading ? 'Scanning Blockchain...' : 'No tokens found'}
-            </Text>
-            <Text style={styles.emptySubtext}>
-              {isLoading ? 'AI is analyzing new launches' : 'Try adjusting your filters'}
-            </Text>
-          </View>
-        }
+        ListEmptyComponent={<EmptyState isLoading={isLoading} />}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
       />
@@ -178,236 +106,310 @@ export default function HomeScreen({ navigation }: any) {
   );
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HERO SECTION — Spiral Black Hole
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function HeroSection({ onStart, navigation }: { onStart: () => void; navigation: any }) {
+  return (
+    <View style={styles.heroContainer}>
+      {/* Spiral Black Hole SVG */}
+      <View style={styles.blackholeWrapper}>
+        <Svg width={240} height={240} viewBox="0 0 240 240">
+          <Defs>
+            <SvgGradient id="spiral1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor="#0066FF" stopOpacity={0.8} />
+              <Stop offset="50%" stopColor="#00E5FF" stopOpacity={0.6} />
+              <Stop offset="100%" stopColor="#00B8FF" stopOpacity={0.2} />
+            </SvgGradient>
+            <SvgGradient id="spiral2" x1="100%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor="#00E5FF" stopOpacity={0.6} />
+              <Stop offset="100%" stopColor="#0066FF" stopOpacity={0.1} />
+            </SvgGradient>
+            <SvgGradient id="spiral3" x1="0%" y1="100%" x2="100%" y2="0%">
+              <Stop offset="0%" stopColor="#00B8FF" stopOpacity={0.5} />
+              <Stop offset="100%" stopColor="#0066FF" stopOpacity={0.1} />
+            </SvgGradient>
+          </Defs>
+
+          {/* Outer soft rings */}
+          <Circle cx={120} cy={120} r={110} stroke="rgba(0,229,255,0.03)" strokeWidth={1} fill="none" />
+          <Circle cx={120} cy={120} r={95} stroke="rgba(0,229,255,0.05)" strokeWidth={0.5} fill="none" />
+
+          {/* Spiral arm 1 — main */}
+          <Path
+            d="M120 120 C120 80, 160 80, 160 120 C160 150, 130 160, 120 160 C100 160, 85 145, 85 120 C85 90, 105 75, 130 75 C165 75, 180 100, 180 120 C180 155, 155 180, 120 180 C80 180, 60 150, 60 120 C60 80, 90 55, 130 55 C175 55, 200 90, 200 120 C200 165, 170 200, 120 200"
+            stroke="url(#spiral1)"
+            strokeWidth={1.2}
+            fill="none"
+            opacity={0.7}
+            strokeLinecap="round"
+          />
+
+          {/* Spiral arm 2 */}
+          <Path
+            d="M120 120 C120 95, 145 90, 150 120 C155 145, 135 155, 120 155 C100 155, 90 140, 90 120 C90 95, 108 82, 130 82 C158 82, 172 102, 172 120 C172 148, 150 170, 120 170 C88 170, 68 148, 68 120 C68 85, 95 62, 130 62 C170 62, 192 92, 192 120"
+            stroke="url(#spiral2)"
+            strokeWidth={0.8}
+            fill="none"
+            opacity={0.5}
+            strokeLinecap="round"
+          />
+
+          {/* Spiral arm 3 — innermost */}
+          <Path
+            d="M120 120 C118 105, 135 100, 140 118 C145 138, 130 148, 118 145 C105 142, 98 130, 100 118 C103 100, 115 90, 132 92 C152 94, 162 112, 160 128 C157 150, 140 165, 118 163 C95 160, 80 142, 82 120 C85 95, 105 78, 130 78"
+            stroke="url(#spiral3)"
+            strokeWidth={0.6}
+            fill="none"
+            opacity={0.35}
+            strokeLinecap="round"
+          />
+
+          {/* Center void */}
+          <Circle cx={120} cy={120} r={18} fill="#0A1120" />
+          <Circle cx={120} cy={120} r={12} fill="#050810" />
+          <Circle cx={120} cy={120} r={5} fill="#000" />
+
+          {/* Glow rings around center */}
+          <Circle cx={120} cy={120} r={22} stroke="rgba(0,229,255,0.3)" strokeWidth={0.8} fill="none" />
+          <Circle cx={120} cy={120} r={28} stroke="rgba(0,229,255,0.12)" strokeWidth={0.5} fill="none" />
+        </Svg>
+
+        {/* Micro particles */}
+        <View style={[styles.particle, { top: 25, left: 65 }]} />
+        <View style={[styles.particle, { top: 50, right: 50 }]} />
+        <View style={[styles.particleSm, { bottom: 45, left: 48 }]} />
+        <View style={[styles.particle, { bottom: 30, right: 58 }]} />
+        <View style={[styles.particleSm, { top: 75, left: 28 }]} />
+        <View style={[styles.particleSm, { top: 35, right: 80 }]} />
+      </View>
+
+      {/* Title */}
+      <Text style={styles.heroTitle}>Sniper</Text>
+      <Text style={styles.heroSubtitle}>AI-Powered Token Intelligence</Text>
+
+      {/* Primary CTA — Gradient pill */}
+      <TouchableOpacity style={styles.ctaWrapper} onPress={onStart} activeOpacity={0.85}>
+        <LinearGradient
+          colors={['#0066FF', '#00E5FF']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.ctaBtn}
+        >
+          <Text style={styles.ctaText}>⚡ Start Sniping</Text>
+        </LinearGradient>
+      </TouchableOpacity>
+
+      {/* Secondary — glass wallet button */}
+      <TouchableOpacity
+        style={styles.walletBtn}
+        onPress={() => navigation.navigate('Profile')}
+        activeOpacity={0.7}
+      >
+        <Text style={styles.walletBtnText}>◈ Connect Wallet</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+
+function EmptyState({ isLoading }: { isLoading: boolean }) {
+  return (
+    <View style={styles.empty}>
+      <View style={styles.emptyIcon}>
+        <Text style={styles.emptyIconText}>◎</Text>
+      </View>
+      <Text style={styles.emptyTitle}>
+        {isLoading ? 'Scanning Blockchain...' : 'No tokens found'}
+      </Text>
+      <Text style={styles.emptySubtext}>
+        {isLoading ? 'AI is analyzing new launches' : 'Try adjusting your filters'}
+      </Text>
+    </View>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STYLES
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.bg.primary,
+    backgroundColor: colors.dark.bg,
   },
 
-  // ═══════════ HERO SECTION ═══════════
+  // ——— HERO ———
   heroContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.xxxl,
+    paddingHorizontal: 40,
   },
-  blackHoleContainer: {
-    width: 200,
-    height: 200,
+  blackholeWrapper: {
+    width: 240,
+    height: 240,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xxxl,
-  },
-  orbitRing: {
-    position: 'absolute',
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  orbitRing1: {
-    width: 100,
-    height: 100,
-    borderColor: 'rgba(0, 229, 255, 0.4)',
-  },
-  orbitRing2: {
-    width: 150,
-    height: 150,
-    borderColor: 'rgba(0, 229, 255, 0.2)',
-  },
-  orbitRing3: {
-    width: 200,
-    height: 200,
-    borderColor: 'rgba(0, 102, 255, 0.12)',
-  },
-  blackHoleCore: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(0, 229, 255, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.cyanStrong,
-  },
-  blackHoleInner: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0, 102, 255, 0.3)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  blackHoleDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.cyan[400],
-    ...shadows.cyan,
+    marginBottom: 40,
   },
   particle: {
     position: 'absolute',
-    width: 4,
-    height: 4,
+    width: 3,
+    height: 3,
     borderRadius: 2,
-    backgroundColor: colors.cyan[400],
-    opacity: 0.8,
+    backgroundColor: '#00E5FF',
+    opacity: 0.7,
   },
   particleSm: {
     position: 'absolute',
     width: 2,
     height: 2,
     borderRadius: 1,
-    backgroundColor: colors.cyan[400],
-    opacity: 0.5,
+    backgroundColor: '#00E5FF',
+    opacity: 0.4,
   },
   heroTitle: {
     ...typography.hero,
-    color: colors.text.primary,
+    color: colors.textDark.primary,
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: 8,
   },
   heroSubtitle: {
     ...typography.heroSub,
-    color: colors.text.tertiary,
+    color: colors.textDark.tertiary,
     textAlign: 'center',
-    marginBottom: spacing.section,
+    marginBottom: spacing.hero,
   },
-  ctaButton: {
+  ctaWrapper: {
     width: '100%',
     maxWidth: 280,
-    borderRadius: radius.full,
+    borderRadius: radius.button,
     overflow: 'hidden',
     marginBottom: spacing.lg,
-    ...shadows.cyan,
+    ...shadows.ctaGlow,
   },
-  ctaGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
+  ctaBtn: {
+    paddingVertical: 18,
+    paddingHorizontal: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.full,
+    borderRadius: radius.button,
   },
   ctaText: {
     ...typography.button,
-    color: colors.white,
-    fontWeight: '700',
+    color: '#FFFFFF',
   },
-  walletButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  walletBtn: {
     paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(10, 26, 46, 0.8)',
+    paddingHorizontal: 32,
+    borderRadius: radius.button,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
     borderWidth: 1,
-    borderColor: colors.border.strong,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
   },
-  walletButtonIcon: {
-    fontSize: 16,
-    color: colors.cyan[400],
-    marginRight: spacing.sm,
-  },
-  walletButtonText: {
+  walletBtnText: {
     ...typography.buttonSm,
-    color: colors.cyan[400],
+    color: 'rgba(0, 229, 255, 0.9)',
   },
 
-  // ═══════════ FEED SECTION ═══════════
-  statusBar: {
+
+  // ——— FEED ———
+  feedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border.subtle,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
   },
-  statusLeft: {
+  feedTitle: {
+    ...typography.h2,
+    color: colors.textDark.primary,
+  },
+  liveIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
   },
-  statusRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    marginRight: spacing.sm,
-  },
-  statusText: {
+  liveText: {
     ...typography.bodySm,
-    color: colors.text.tertiary,
-  },
-  countText: {
-    ...typography.bodySm,
-    color: colors.cyan[400],
-    opacity: 0.7,
+    color: colors.textDark.tertiary,
   },
   filterRow: {
     flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.lg,
     gap: spacing.sm,
   },
   filterChip: {
-    borderRadius: radius.full,
-    backgroundColor: colors.bg.secondary,
+    borderRadius: radius.button,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
     borderWidth: 1,
-    borderColor: colors.border.subtle,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
     overflow: 'hidden',
   },
   filterChipActive: {
     borderColor: 'transparent',
-    ...shadows.cyan,
+    ...shadows.cyanGlow,
   },
-  filterChipGradient: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
+  filterGradient: {
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: radius.button,
   },
   filterText: {
     ...typography.label,
-    color: colors.text.tertiary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    color: 'rgba(255, 255, 255, 0.4)',
+    paddingHorizontal: 18,
+    paddingVertical: 8,
   },
   filterTextActive: {
     ...typography.label,
     color: '#FFFFFF',
+    fontWeight: '600',
   },
   list: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.xxxl,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xs,
+    paddingBottom: 100, // space for floating nav
   },
   empty: {
     alignItems: 'center',
     marginTop: 80,
     paddingHorizontal: spacing.xxxl,
   },
-  emptyIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(0, 229, 255, 0.08)',
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(0, 229, 255, 0.05)',
     borderWidth: 1,
-    borderColor: colors.border.default,
+    borderColor: colors.borderDark.default,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.lg,
   },
-  emptyIcon: {
-    fontSize: 32,
-    color: colors.cyan[400],
+  emptyIconText: {
+    fontSize: 28,
+    color: colors.primary.cyan,
+    opacity: 0.7,
   },
   emptyTitle: {
     ...typography.h4,
-    color: colors.text.secondary,
+    color: colors.textDark.secondary,
     marginBottom: spacing.sm,
   },
   emptySubtext: {
     ...typography.bodySm,
-    color: colors.text.tertiary,
+    color: colors.textDark.tertiary,
     textAlign: 'center',
   },
 });
