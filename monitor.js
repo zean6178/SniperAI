@@ -161,8 +161,8 @@ async function evaluatePosition(mint, position) {
         }
       } catch {}
 
-      console.log(chalk.yellow(`[monitor] ⏰ ${position.symbol} pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${config.exit.maxHoldTimeMinutes}min) — simulated flat exit`));
-      await executeSell(mint, position, 100, `⏰ TIME EXIT: pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${config.exit.maxHoldTimeMinutes}min) — no migration detected`, { type: 'time_exit' });
+      console.log(chalk.yellow(`[monitor] ⏰ ${position.symbol} pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${maxHoldMinutes.toFixed(0)}min) — simulated flat exit`));
+      await executeSell(mint, position, 100, `⏰ TIME EXIT: pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${maxHoldMinutes.toFixed(0)}min) — no migration detected`, { type: 'time_exit' });
       return;
     }
 
