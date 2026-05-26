@@ -557,14 +557,14 @@ async function pollBundleConfirmation(bundleId, jitoConfig, timeoutMs = 30000) {
  * @param {number} params.slippageBps - Slippage tolerance
  * @returns {Promise<{success: boolean, txHash?: string, solReceived?: number, error?: string}>}
  */
-export async function sellToken({ mint, sellPct, slippageBps, tradeValueSol, entryPriceSol }) {
+export async function sellToken({ mint, sellPct, slippageBps, tradeValueSol, entryPriceSol, useBondingCurve = false }) {
   const config = getConfig();
   const isDry = config.isDryRun;
 
   if (isDry) {
     console.log(chalk.yellow(`[executor] 🧪 DRY RUN — Sell ${sellPct}% of ${mint.slice(0, 8)}…`));
     // Dry run: gunakan real price dari bonding curve untuk simulated PnL
-    let currentPrice = await getTokenPrice(mint).catch(() => null);
+    let currentPrice = await getTokenPrice(mint, useBondingCurve).catch(() => null);
 
     // ⭐ FIX: Fallback to PumpPortal WS cached price for pre-migration tokens
     if (!currentPrice || currentPrice <= 0) {
@@ -918,7 +918,7 @@ async function getMintDecimals(mint) {
   }
 }
 
-export async function getTokenPrice(mint) {
+export async function getTokenPrice(mint, useBondingCurve = false) {
   try {
     // ⭐ First try cached trade price from PumpPortal WS (REAL-TIME, most reliable)
     const { getCachedTradePrice } = await import('./detector.js');
@@ -953,9 +953,11 @@ export async function getTokenPrice(mint) {
     const dexPrice = await getDexScreenerPrice(mint);
     if (dexPrice !== null) return dexPrice;
 
-    // ⭐ Bonding curve AMM PDA — DISABLED (hit-and-run mode)
-    // const pumpPrice = await getPumpFunPrice(mint, decimals);
-    // if (pumpPrice !== null) return pumpPrice;
+        // ⭐ Bonding curve AMM PDA — HYBRID: only if position has detected activity
+    if (useBondingCurve) {
+      const pumpPrice = await getPumpFunPrice(mint, decimals);
+      if (pumpPrice !== null) return pumpPrice;
+    }
 
     return null;
   } catch {

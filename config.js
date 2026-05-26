@@ -174,6 +174,12 @@ takeProfitLevels: [
         liquidityDropPct:     60,
         priceDropPct:         70,
       },
+      // ── Hybrid Bonding Curve — auto-ON if detected activity ──
+      hybridBondingCurve: {
+        enabled:      true,
+        minTrades:    3,           // ≥3 trades dalam window → bonding curve ON
+        windowSec:    30,          // window deteksi dalam detik
+      },
     },
 
     // ═══════════════════════════════════════════════════════════════════════════

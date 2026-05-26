@@ -111,7 +111,7 @@ async function evaluatePosition(mint, position) {
   const config = getConfig();
 
   // 1. Get current price
-  const currentPriceSol = await getTokenPrice(mint);
+  const currentPriceSol = await getTokenPrice(mint, position.useBondingCurve);
   if (currentPriceSol === null) {
     // Price unavailable — could be pre-migration token (not on Jupiter yet)
     const hadPriceBefore = position.currentPriceSol && position.currentPriceSol > 0;
@@ -146,35 +146,59 @@ async function evaluatePosition(mint, position) {
       }
     } catch {}
 
-    // Force-close pre-migration tokens that exceeded max hold time
-    if (!hadPriceBefore && holdTimeMin >= maxHoldMinutes) {
-      // Calculate real PnL for pre-migration dry-run using cached mcap
-      let preMigPnlPct = 0;
+    // ══════════════════════════════════════════════════════════════════════
+    // HYBRID BONDING CURVE — auto-ON jika terdeteksi aktivitas trading
+    // ══════════════════════════════════════════════════════════════════════
+    const hbc = config.exit.hybridBondingCurve;
+    if (hbc?.enabled && !position.useBondingCurve && !hadPriceBefore && holdTimeMin < maxHoldMinutes) {
       try {
-        const { getCachedMcap } = await import('./detector.js');
-        const currentMcap = getCachedMcap(mint);
-        // Re-read position in case entryMcapSol was just updated above
-        const freshPos = (await import('./state.js')).getPosition(mint) || position;
-        if (currentMcap > 0 && freshPos.entryMcapSol > 0) {
-          preMigPnlPct = ((currentMcap - freshPos.entryMcapSol) / freshPos.entryMcapSol) * 100;
-          updatePosition(mint, { pnlPct: preMigPnlPct });
+        const { getTradeStats } = await import('./detector.js');
+        const stats = getTradeStats(mint, hbc.windowSec * 1000);
+        const totalTrades = (stats?.buyCount || 0) + (stats?.sellCount || 0);
+        if (totalTrades >= hbc.minTrades) {
+          console.log(chalk.cyan(`[monitor] 🔗 ${position.symbol} — ${totalTrades} trades in ${hbc.windowSec}s → bonding curve ON`));
+          updatePosition(mint, { useBondingCurve: true });
+          position.useBondingCurve = true;
+          const bcPrice = await getTokenPrice(mint, true);
+          if (bcPrice !== null) {
+            console.log(chalk.green(`[monitor] 💰 ${position.symbol} — bonding curve price found: ${bcPrice.toFixed(8)} SOL`));
+            // ⭐ Override currentPriceSol so flow continues to risk check
+            currentPriceSol = bcPrice;
+          }
         }
       } catch {}
+    }
 
-      console.log(chalk.yellow(`[monitor] ⏰ ${position.symbol} pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${maxHoldMinutes.toFixed(0)}min) — simulated flat exit`));
-      await executeSell(mint, position, 100, `⏰ TIME EXIT: pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${maxHoldMinutes.toFixed(0)}min) — no migration detected`, { type: 'time_exit' });
+    // If hybrid bonding curve found a price, skip time-exit / stale checks
+    if (currentPriceSol !== null) {
+      // Continue to risk check below (exit the null-handling block)
+    } else {
+      // Force-close pre-migration tokens that exceeded max hold time
+      if (!hadPriceBefore && holdTimeMin >= maxHoldMinutes) {
+        let preMigPnlPct = 0;
+        try {
+          const { getCachedMcap } = await import('./detector.js');
+          const currentMcap = getCachedMcap(mint);
+          const freshPos = (await import('./state.js')).getPosition(mint) || position;
+          if (currentMcap > 0 && freshPos.entryMcapSol > 0) {
+            preMigPnlPct = ((currentMcap - freshPos.entryMcapSol) / freshPos.entryMcapSol) * 100;
+            updatePosition(mint, { pnlPct: preMigPnlPct });
+          }
+        } catch {}
+
+        console.log(chalk.yellow(`[monitor] ⏰ ${position.symbol} pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${maxHoldMinutes.toFixed(0)}min) — simulated flat exit`));
+        await executeSell(mint, position, 100, `⏰ TIME EXIT: pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${maxHoldMinutes.toFixed(0)}min) — no migration detected`, { type: 'time_exit' });
+        return;
+      }
+
+      if (hadPriceBefore && staleDurationMs > staleThresholdMs) {
+        console.log(chalk.yellow(`[monitor] ⚠️ ${position.symbol} price lost for ${(staleDurationMs / 60000).toFixed(0)}min (had price before) — emergency sell`));
+        await executeSell(mint, position, 100, '⚠️ STALE PRICE: previously priced token lost price data');
+      } else if (!hadPriceBefore) {
+        console.log(chalk.gray(`[monitor] ℹ️ ${position.symbol} no Jupiter price (pre-migration) — ${holdTimeMin.toFixed(0)}/${config.exit.maxHoldTimeMinutes}min before auto-close`));
+      }
       return;
     }
-
-    if (hadPriceBefore && staleDurationMs > staleThresholdMs) {
-      // Token previously had price but now lost it — likely rug/delist
-      console.log(chalk.yellow(`[monitor] ⚠️ ${position.symbol} price lost for ${(staleDurationMs / 60000).toFixed(0)}min (had price before) — emergency sell`));
-      await executeSell(mint, position, 100, '⚠️ STALE PRICE: previously priced token lost price data');
-    } else if (!hadPriceBefore) {
-      // Token never had a Jupiter price — it's pre-migration, this is NORMAL
-      console.log(chalk.gray(`[monitor] ℹ️ ${position.symbol} no Jupiter price (pre-migration) — ${holdTimeMin.toFixed(0)}/${config.exit.maxHoldTimeMinutes}min before auto-close`));
-    }
-    return;
   }
 
   // 2. Update position metadata
@@ -259,7 +283,7 @@ async function executeSell(mint, position, sellPct, reason, exitMeta = {}) {
 
   // Execute sell
   const tradeValueSol = position.entryAmountSol ? (position.entryAmountSol * (sellPct / 100)) : 0;
-  const result = await sellToken({ mint, sellPct, slippageBps: slippage, tradeValueSol, entryPriceSol: position.entryPriceSol });
+  const result = await sellToken({ mint, sellPct, slippageBps: slippage, tradeValueSol, entryPriceSol: position.entryPriceSol, useBondingCurve: position.useBondingCurve });
 
   if (result.success) {
     const soldPct = (position.soldPct || 0) + sellPct;

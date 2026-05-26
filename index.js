@@ -768,7 +768,7 @@ async function handleCallback({ action, mint, value, msgId, chatId, queryId }) {
         const { buildPositionStatusText, buildSellKeyboard } = await import('./telegram-ui.js');
         const { getTokenPrice, getTokenBalance } = await import('./executor.js');
 
-        const currentPrice = await getTokenPrice(mint);
+        const currentPrice = await getTokenPrice(mint, pos.useBondingCurve);
         const currentMultiple = currentPrice && pos.entryPriceSol > 0
           ? currentPrice / pos.entryPriceSol : 1;
         const pnlPct = currentPrice && pos.entryPriceSol > 0

@@ -120,6 +120,7 @@ export function savePosition(tokenMint, positionData) {
     peakMultiple: 1.0,
     soldPct: 0,
     sellHistory: [],
+    useBondingCurve: false,   // hybrid bonding curve — auto-ON jika terdeteksi aktivitas
   };
   saveState(state, true); // ⭐ force = langsung nulis
 }
