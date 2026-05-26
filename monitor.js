@@ -72,12 +72,11 @@ async function monitorCycle() {
 async function evaluatePosition(mint, position) {
   const config = getConfig();
 
-  // 1. Get current price
+  // 1. Get current price (now supports bonding curve + Jupiter)
   const currentPriceSol = await getTokenPrice(mint);
   if (currentPriceSol === null) {
-    // Price unavailable — could be pre-migration token (not on Jupiter yet)
-    // DON'T emergency sell just because price is unavailable!
-    // Only trigger stale exit if we previously HAD a price and now lost it.
+    // Price truly unavailable from ALL sources (tradeTracker + on-chain + Jupiter)
+    // This means: no recent trades, can't read bonding curve, and not on Jupiter.
     const hadPriceBefore = position.currentPriceSol && position.currentPriceSol > 0;
     const lastPriceCheck = position.lastPriceCheck || position.openedAt;
     const staleDurationMs = Date.now() - new Date(lastPriceCheck).getTime();
@@ -88,19 +87,35 @@ async function evaluatePosition(mint, position) {
       console.log(chalk.yellow(`[monitor] ⚠️ ${position.symbol} price lost for ${(staleDurationMs / 60000).toFixed(0)}min (had price before) — emergency sell`));
       await executeSell(mint, position, 100, '⚠️ STALE PRICE: previously priced token lost price data');
     } else if (!hadPriceBefore) {
-      // Token never had a Jupiter price — it's pre-migration, this is NORMAL
-      // Skip — don't sell just because Jupiter can't quote a Pump.fun bonding curve token
-      console.log(chalk.gray(`[monitor] ℹ️ ${position.symbol} no Jupiter price (pre-migration) — skipping`));
+      // Token never had price from ANY source — truly no data available
+      // Check time-based exit as safety (don't hold blind positions forever)
+      const holdMs = Date.now() - new Date(position.openedAt).getTime();
+      const maxHoldMs = (config.exit.maxHoldTimeMinutes || 60) * 60 * 1000;
+      if (holdMs > maxHoldMs) {
+        console.log(chalk.yellow(`[monitor] ⏰ ${position.symbol} no price data for ${(holdMs / 60000).toFixed(0)}min — TIME EXIT (blind)`));
+        await executeSell(mint, position, 100, `⏰ TIME EXIT: no price data available for ${(holdMs / 60000).toFixed(0)}min`);
+      } else {
+        console.log(chalk.gray(`[monitor] ℹ️ ${position.symbol} no price from any source — waiting (${(holdMs / 60000).toFixed(1)}m/${config.exit.maxHoldTimeMinutes}m)`));
+      }
     }
     return;
   }
 
   // 2. Update position metadata
+  const priceSource = currentPriceSol < 0.0001 ? 'bonding-curve' : 'jupiter'; // rough heuristic for logging
   const peakPrice = Math.max(position.peakPriceSol || 0, currentPriceSol);
   const currentMultiple = position.entryPriceSol > 0
     ? currentPriceSol / position.entryPriceSol
     : 1;
   const pnlPct = ((currentPriceSol - position.entryPriceSol) / position.entryPriceSol) * 100;
+
+  // Log price update (verbose for debugging)
+  if (!position.currentPriceSol || Math.abs(pnlPct - (position.pnlPct || 0)) > 1) {
+    console.log(chalk.gray(
+      `[monitor] 📊 ${position.symbol} | price: ${currentPriceSol.toExponential(3)} SOL | ` +
+      `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}% | ${currentMultiple.toFixed(2)}x | peak: ${peakPrice.toExponential(3)}`
+    ));
+  }
 
   updatePosition(mint, {
     currentPriceSol,

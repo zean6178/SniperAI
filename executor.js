@@ -14,6 +14,7 @@ import bs58 from 'bs58';
 import axios from 'axios';
 import chalk from 'chalk';
 import { getConfig } from './config.js';
+import { getTradeStats } from './detector.js';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONNECTION & WALLET
@@ -365,9 +366,120 @@ export async function getTokenBalance(mint) {
 }
 
 /**
- * Get token price in SOL (via bonding curve or Jupiter)
+ * Get token price in SOL
+ * 
+ * Strategy (ordered by priority):
+ * 1. Bonding curve price from tradeTracker (real-time WebSocket data)
+ * 2. On-chain bonding curve account read (if tradeTracker has no data)
+ * 3. Jupiter quote API (for migrated tokens)
+ * 
+ * This ensures pre-migration tokens on Pump.fun bonding curve
+ * always have a price — fixing the 0% PnL bug in curveplay strategy.
  */
 export async function getTokenPrice(mint) {
+  // Method 1: Try bonding curve price from WebSocket trade data (fastest, no RPC call)
+  const bcPrice = getBondingCurvePrice(mint);
+  if (bcPrice !== null) {
+    return bcPrice;
+  }
+
+  // Method 2: Try on-chain bonding curve account (for tokens with no recent trades)
+  const onChainPrice = await getOnChainBondingCurvePrice(mint);
+  if (onChainPrice !== null) {
+    return onChainPrice;
+  }
+
+  // Method 3: Jupiter quote (for migrated tokens)
+  return await getJupiterPrice(mint);
+}
+
+/**
+ * Get price from tradeTracker WebSocket data (detector.js)
+ * Uses latest mcapSol from real-time trade feed.
+ * 
+ * Price calculation:
+ *   marketCapSol = virtual_sol_reserves (vSol in bonding curve)
+ *   tokenSupply = 1_000_000_000 (1B tokens, standard pump.fun)
+ *   pricePerToken = mcapSol / tokenSupply
+ * 
+ * @param {string} mint
+ * @returns {number|null} price in SOL per token, or null if no data
+ */
+
+function getBondingCurvePrice(mint) {
+  const stats = getTradeStats(mint, 10 * 60 * 1000); // Look back 10 minutes
+  if (!stats || !stats.latestMcapSol || stats.latestMcapSol <= 0) {
+    return null;
+  }
+
+  // Pump.fun standard: 1 billion token supply
+  const PUMP_TOKEN_SUPPLY = 1_000_000_000;
+  const TOKEN_DECIMALS = 6;
+  const tokensPerUnit = 10 ** TOKEN_DECIMALS; // 1 token = 1_000_000 raw units
+
+  // mcapSol is the virtual SOL in the bonding curve (= total market cap in SOL)
+  // Price per 1 raw token unit (what Jupiter would return for amount=1000000)
+  const pricePerToken = stats.latestMcapSol / PUMP_TOKEN_SUPPLY;
+
+  // Return price for 1 full token (1_000_000 raw units — matching Jupiter's amount param)
+  return pricePerToken;
+}
+
+/**
+ * Get price by reading bonding curve account on-chain
+ * Fallback when tradeTracker has no recent data for this token.
+ * 
+ * Pump.fun bonding curve account layout:
+ *   - offset 8: virtualTokenReserves (u64)
+ *   - offset 16: virtualSolReserves (u64)
+ *   - offset 24: realTokenReserves (u64)  
+ *   - offset 32: realSolReserves (u64)
+ * 
+ * Price = virtualSolReserves / virtualTokenReserves
+ */
+async function getOnChainBondingCurvePrice(mint) {
+  try {
+    const connection = getConnection();
+    
+    // Derive bonding curve PDA (Pump.fun program)
+    const PUMP_PROGRAM = new PublicKey('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P');
+    const [bondingCurve] = PublicKey.findProgramAddressSync(
+      [Buffer.from('bonding-curve'), new PublicKey(mint).toBuffer()],
+      PUMP_PROGRAM
+    );
+
+    const accountInfo = await connection.getAccountInfo(bondingCurve);
+    if (!accountInfo || !accountInfo.data || accountInfo.data.length < 40) {
+      return null; // No bonding curve account = already migrated or invalid
+    }
+
+    const data = accountInfo.data;
+
+    // Read virtual reserves (u64 little-endian)
+    const virtualTokenReserves = Number(data.readBigUInt64LE(8));
+    const virtualSolReserves = Number(data.readBigUInt64LE(16));
+
+    if (virtualTokenReserves <= 0 || virtualSolReserves <= 0) {
+      return null;
+    }
+
+    // Price per 1 token unit (in SOL)
+    // virtualSolReserves is in lamports, virtualTokenReserves is in raw token units
+    const priceInLamports = virtualSolReserves / virtualTokenReserves;
+    const priceInSol = priceInLamports / LAMPORTS_PER_SOL;
+
+    // Return price for 1 full token (1_000_000 raw units)
+    return priceInSol * 1_000_000;
+  } catch (e) {
+    // Silent fail — will fall through to Jupiter
+    return null;
+  }
+}
+
+/**
+ * Get price via Jupiter Quote API (for migrated tokens)
+ */
+async function getJupiterPrice(mint) {
   try {
     const SOL_MINT = 'So11111111111111111111111111111111111111112';
     const res = await axios.get('https://quote-api.jup.ag/v6/quote', {
