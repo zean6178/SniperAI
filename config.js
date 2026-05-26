@@ -290,6 +290,16 @@ export function getConfig() {
   return _config;
 }
 
+/**
+ * Force rebuild config from env — call after code update or /reload command
+ * @returns {object} fresh config
+ */
+export function reloadConfig() {
+  _config = buildConfig();
+  console.log('[config] 🔄 Config reloaded from env');
+  return _config;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRESET SYSTEM — Load profile overrides (Safe/Degen/Ape)
 // ═══════════════════════════════════════════════════════════════════════════════
