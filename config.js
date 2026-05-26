@@ -166,7 +166,7 @@ function buildConfig() {
         { triggerMultiple: 10.0, sellPct: 100 },  // 10x → full exit
       ],
       stopLossPct:          -25,
-      trailingStopPct:      20,
+      trailingStopPct:      15,
       maxHoldTimeMinutes:   10,      // Naikin: 5m → 10m biar token lebih waktu migrasi
       stalePriceMinutes:    2,       // Turun: 10m → 2 menit — force exit kalo no movement
       autoExitOnRug:        true,

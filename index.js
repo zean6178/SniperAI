@@ -470,13 +470,10 @@ async function handleNewToken(tokenData) {
         `MCap: ${formatMcapUsd(tokenData.marketCapSol)}\n` +
         `Tx: \`${buyResult.txHash}\`\n\n` +
         `_Monitoring started — TP/SL active_`
-      );
-      // 🔊 Sound + push notification for SNIPED
+);
+      // 🔊 Sound signal for mobile app + inline keyboard for Telegram
       sendSound(
-        '✅🔊 *SNIPED!*\n\n' +
-        `Token: *${tokenData.symbol}*\n` +
-        `Amount: *${buyAmountSol} SOL* — Score: *${screenResult.score}/100*\n` +
-        '_Monitoring started — TP/SL active_'
+        `✅ *SNIPED!*\n\nToken: *${tokenData.symbol}* — Score: *${screenResult.score}/100*`
       ).catch(() => {});
       await sendInlineKeyboard(
         notifText,

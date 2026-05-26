@@ -395,35 +395,18 @@ export async function sendMessageToChat(chatId, text, keyboard = null) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Send a sound notification: terminal bell (\\x07) AND a Telegram message
- * with vibration (disable_notification: false for guaranteed push).
+ * Send a sound notification: terminal bell (\x07) + console log
  * 
- * Use this for high-priority alerts like SNIPED events.
+ * This is a signal/hook for the SniperAI mobile app.
+ * Currently just triggers terminal beep and logs — no Telegram message sent.
+ * Mobile app will hook into this for push notifications.
  * 
- * @param {string} message - The alert text to send
+ * @param {string} message - The alert text
  */
 export async function sendSound(message) {
   // Terminal bell — \x07 triggers audible beep in most terminals
   process.stdout.write('\x07');
-  console.log(chalk.magenta('[telegram] 🔊 Sound alert triggered'));
-
-  // Send a high-priority Telegram notification with vibration effect
-  // disable_notification: false ensures the user gets a push notification
-  const token = getConfig().telegram.botToken;
-  const chatId = getConfig().telegram.chatId;
-  if (!token || !chatId) return;
-
-  await _rateLimitedSend(async () => {
-    return fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-        disable_web_page_preview: true,
-        disable_notification: false,   // Force push notification with vibration
-      }),
-    });
-  }, 'sendSound');
+  console.log(chalk.magenta(`[telegram] 🔊 Sound alert triggered: ${message?.slice(0, 80)}`));
+  // ⚡ Mobile app: hook into this function for push notification
+  // Example: emitToMobileApp('snipe_alert', { message, timestamp: Date.now() });
 }

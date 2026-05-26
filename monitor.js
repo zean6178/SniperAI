@@ -11,9 +11,7 @@
 
 import chalk from 'chalk';
 import { getConfig } from './config.js';
-import {
-  getOpenPositions, updatePosition, closePosition as closePositionState,
-} from './state.js';
+import { getOpenPositions, updatePosition, closePosition as closePositionState, getClosedCount } from './state.js';
 import { sellToken, getTokenPrice, getTokenBalance } from './executor.js';
 import { checkExitConditions, detectRug, recordLoss } from './risk.js';
 import { sendTelegram } from './telegram.js';
@@ -271,20 +269,24 @@ async function executeSell(mint, position, sellPct, reason, exitMeta = {}) {
       const exitMcap = position.entryMcapSol > 0
         ? formatMcapUsd(position.entryMcapSol * pnlRatio)
         : 'N/A';
-      const tpLabel = 'TP: 3.0x/5.0x/10.0x';
+      // TP as percentage (convert first TP multiple to %)
+      const firstTpPct = config.exit.takeProfitLevels?.[0]?.triggerMultiple
+        ? ((config.exit.takeProfitLevels[0].triggerMultiple - 1) * 100).toFixed(0)
+        : 'N/A';
+      const tpLabel = `TP: ${firstTpPct}%`;
       const slLabel = `SL: ${config.exit.stopLossPct}%`;
       const trailLabel = `Trail: ${config.exit.trailingStopPct}%`;
-      const holdTime = getHoldTime(position.openedAt);
+      const posNumber = getClosedCount() + 1;
 
       await sendTelegram(
         `${emoji} *Dry-run exit: ${exitLabel}*\n\n` +
-        `📍 *${position.symbol}*\n` +
-        `Token: \`${mint.slice(0, 8)}…\`\n` +
+        `📍 *${position.symbol}*  #${posNumber}\n` +
+        `Token: \`${mint.slice(0, 8)}…pump\`\n` +
         `Status: closed ${dryRunLabel}${strategyLabel}\n` +
-        `Entry: ${entryMcap} → Exit: ${exitMcap} · High: ${peakMcap}\n` +
-        `Size: *${(position.entryAmountSol || 0).toFixed(4)} SOL* · PnL: *${pnlPct.toFixed(1)}%*\n` +
+        `Entry mcap: ${entryMcap} · High: ${peakMcap}\n` +
+        `Size: ${(position.entryAmountSol || 0).toFixed(4)} SOL · PnL: *${pnlPct.toFixed(1)}%*\n` +
         `${tpLabel} · ${slLabel} · ${trailLabel}\n` +
-        `Exit: ${exitLabel} at ${holdTime} (${pnlPct.toFixed(1)}%)\n` +
+        `Exit: ${exitLabel} at ${exitMcap} (${pnlPct.toFixed(1)}%)\n` +
         `_${reason}_`
       );
     } else {

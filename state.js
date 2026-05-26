@@ -226,3 +226,7 @@ export function isTokenBlacklisted(mint) {
 export function getFullState() {
   return loadState();
 }
+
+export function getClosedCount() {
+  return loadState().tradeHistory.length;
+}
