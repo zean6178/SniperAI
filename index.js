@@ -221,6 +221,7 @@ onCommand('help', async (chatId) => {
       `/silent — 🔇 Suppress notifications (pipeline tetap jalan)\n` +
       `/speak — 🔊 Resume notifications\n` +
       `/preset safe|degen|ape — 🎛️ Load preset profile\n` +
+      `/reload — 🔄 Reload config (apply code changes without restart)\n` +
       `/stop — 🛑 Stop bot entirely\n` +
       `/restart — 🔄 Restart bot via PM2\n` +
       `/sync — 🔄 Sync on-chain positions (kalo lo jual manual)\n` +
@@ -271,6 +272,25 @@ onCommand('help', async (chatId) => {
     );
 
     console.log(chalk.cyan(`[main] 🎛️ Preset loaded: ${presetName} (${preset.label})`));
+  });
+
+  onCommand('reload', async (chatId) => {
+    const { reloadConfig } = await import('./config.js');
+    const cfg = reloadConfig();
+    const firstTpPct = cfg.exit.takeProfitLevels?.[0]?.triggerMultiple
+      ? ((cfg.exit.takeProfitLevels[0].triggerMultiple - 1) * 100).toFixed(0)
+      : 'N/A';
+    await sendMessageToChat(chatId,
+      `🔄 *Config Reloaded*\n\n` +
+      `📋 *Current settings:*\n` +
+      `• TP: *${firstTpPct}%* (${cfg.exit.takeProfitLevels.map(l => l.triggerMultiple + 'x').join(' / ')})\n` +
+      `• SL: *${cfg.exit.stopLossPct}%*\n` +
+      `• Trail: *${cfg.exit.trailingStopPct}%*\n` +
+      `• Buy: *${cfg.entry.buyAmountSol} SOL*\n` +
+      `• Max Hold: *${cfg.exit.maxHoldTimeMinutes}min*\n` +
+      `• Max Positions: *${cfg.risk.maxOpenPositions}*`
+    );
+    console.log(chalk.cyan('[main] 🔄 Config reloaded via /reload command'));
   });
 
   // Start callback poller untuk inline keyboard
