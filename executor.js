@@ -953,9 +953,9 @@ export async function getTokenPrice(mint) {
     const dexPrice = await getDexScreenerPrice(mint);
     if (dexPrice !== null) return dexPrice;
 
-    // ⭐ Last resort: Pump.fun bonding curve AMM PDA (on-chain, real price)
-    const pumpPrice = await getPumpFunPrice(mint, decimals);
-    if (pumpPrice !== null) return pumpPrice;
+    // ⭐ Bonding curve AMM PDA — DISABLED (hit-and-run mode)
+    // const pumpPrice = await getPumpFunPrice(mint, decimals);
+    // if (pumpPrice !== null) return pumpPrice;
 
     return null;
   } catch {
@@ -1076,8 +1076,8 @@ async function getPumpFunMcap(mint, decimals) {
         } catch {}
       }
     }
-    // Last resort: try AMM PDA
-    return await getPumpFunPrice(mint, decimals) !== null ? 1000 : 0;
+    // Last resort: try AMM PDA — DISABLED (hit-and-run mode)
+    return 0;
   } catch {
     return 0;
   }
