@@ -127,25 +127,36 @@ async function evaluatePosition(mint, position) {
       maxHoldMinutes = config.screening.tradeModes[tradeMode].maxHoldSeconds / 60;
     }
 
-    // ⭐ FIX: Try to update peakMcapSol from PumpPortal WS cached data even without Jupiter price
+    // Try to update peakMcapSol from PumpPortal WS cached data even without Jupiter price
     try {
       const { getCachedMcap } = await import('./detector.js');
       const liveMcap = getCachedMcap(mint);
       if (liveMcap > 0) {
-        const currentPeakMcap = Math.max(position.peakMcapSol || 0, liveMcap);
-        updatePosition(mint, { peakMcapSol: currentPeakMcap, lastPriceCheck: new Date().toISOString() });
+        const updates = {
+          peakMcapSol: Math.max(position.peakMcapSol || 0, liveMcap),
+          lastPriceCheck: new Date().toISOString(),
+        };
+        // ✅ FIX BUG 4: Retroaktif isi entryMcapSol jika belum ada (pre-migration token)
+        if (!(position.entryMcapSol > 0)) {
+          updates.entryMcapSol = liveMcap;
+          updates.peakMcapSol = liveMcap; // reset peak = entry (first known mcap)
+          console.log(chalk.gray(`[monitor] 📐 ${position.symbol} entryMcapSol retroactively set to ${liveMcap.toFixed(2)} SOL`));
+        }
+        updatePosition(mint, updates);
       }
     } catch {}
 
     // Force-close pre-migration tokens that exceeded max hold time
     if (!hadPriceBefore && holdTimeMin >= maxHoldMinutes) {
-      // ⭐ FIX: Calculate real PnL for pre-migration dry-run using cached mcap
+      // Calculate real PnL for pre-migration dry-run using cached mcap
       let preMigPnlPct = 0;
       try {
         const { getCachedMcap } = await import('./detector.js');
         const currentMcap = getCachedMcap(mint);
-        if (currentMcap > 0 && position.entryMcapSol > 0) {
-          preMigPnlPct = ((currentMcap - position.entryMcapSol) / position.entryMcapSol) * 100;
+        // Re-read position in case entryMcapSol was just updated above
+        const freshPos = (await import('./state.js')).getPosition(mint) || position;
+        if (currentMcap > 0 && freshPos.entryMcapSol > 0) {
+          preMigPnlPct = ((currentMcap - freshPos.entryMcapSol) / freshPos.entryMcapSol) * 100;
           updatePosition(mint, { pnlPct: preMigPnlPct });
         }
       } catch {}
@@ -179,7 +190,7 @@ async function evaluatePosition(mint, position) {
     : 0;
   const peakMcapSol = Math.max(position.peakMcapSol || 0, currentMcapEst);
 
-  updatePosition(mint, {
+  const posUpdates = {
     currentPriceSol,
     peakPriceSol: peakPrice,
     peakMultiple: Math.max(position.peakMultiple || 1, currentMultiple),
@@ -187,7 +198,17 @@ async function evaluatePosition(mint, position) {
     currentMultiple,
     pnlPct,
     lastPriceCheck: new Date().toISOString(),
-  });
+  };
+
+  // ✅ FIX BUG 4: Retroaktif isi entryMcapSol jika masih 0 tapi currentMcapEst sudah tersedia
+  // (Terjadi saat token pre-migration yang baru dapat Jupiter price setelah migrate)
+  if (!(position.entryMcapSol > 0) && currentMcapEst > 0) {
+    posUpdates.entryMcapSol = currentMcapEst;
+    posUpdates.peakMcapSol = currentMcapEst; // peak = entry dulu, akan naik dari sini
+    console.log(chalk.gray(`[monitor] 📐 ${position.symbol} entryMcapSol retroactively set to ${currentMcapEst.toFixed(2)} SOL (post-migration)`));
+  }
+
+  updatePosition(mint, posUpdates);
 
   // 3. Check rug detection (emergency)
   if (config.exit.autoExitOnRug) {
@@ -278,24 +299,40 @@ async function executeSell(mint, position, sellPct, reason, exitMeta = {}) {
       if (config.isDryRun) metaParts.push('Mode: dry\\_run');
       if (position.tradeMode) metaParts.push(`Strategy: ${position.tradeMode.replace(/_/g, '\\_')}`);
       const statusLine = `Status: ${metaParts.join(' · ')}`;
+
       const entryMcap = position.entryMcapSol > 0
         ? formatMcapUsd(position.entryMcapSol)
         : 'N/A';
-      // ⭐ FIX: Use actual peakMcapSol tracked during hold period (not just entryMcap as fallback)
-      const peakMcap = (position.peakMcapSol || 0) > (position.entryMcapSol || 0)
+
+      // ✅ FIX BUG 1: Tampilkan peakMcapSol selama > 0, bukan hanya saat > entryMcapSol
+      // Bug lama: kondisi (peakMcapSol > entryMcapSol) selalu false karena savePosition()
+      // menginit peakMcapSol = entryMcapSol, sehingga High selalu tampil sama dengan Entry
+      const peakMcap = position.peakMcapSol > 0
         ? formatMcapUsd(position.peakMcapSol)
         : entryMcap;
-      const pnlPct = position.pnlPct || ((pnlSol / (position.entryAmountSol || 1)) * 100);
-      // ⭐ FIX: Exit MCap — use peakMcapSol if pnl is 0 (pre-migration flat exit)
-      const pnlRatio = position.entryAmountSol > 0
-        ? 1 + (pnlSol / position.entryAmountSol)
-        : 1;
-      const exitMcapValue = pnlRatio !== 1 && position.entryMcapSol > 0
-        ? position.entryMcapSol * pnlRatio
+
+      // ✅ FIX BUG 2: Hitung pnlPct dari pnlSol aktual (realized), bukan dari position.pnlPct
+      // Bug lama: position.pnlPct adalah unrealized % dari last price check — bisa stale
+      // dan tidak mencerminkan actual exit PnL setelah slippage/fee
+      const pnlPct = entryAmountSol > 0
+        ? (pnlSol / entryAmountSol) * 100
+        : (position.pnlPct || 0);
+
+      // ✅ FIX BUG 3: Gunakan currentMultiple (price-based) untuk estimasi exit mcap
+      // Bug lama: pnlRatio = 1 + (pnlSol / entryAmountSol) — ini SOL-based dan sudah
+      // dipotong slippage/fee sehingga exit mcap ikut meleset. Harusnya pakai price ratio.
+      const exitMultiple = position.currentMultiple > 0
+        ? position.currentMultiple
+        : (position.entryPriceSol > 0 && position.currentPriceSol > 0
+            ? position.currentPriceSol / position.entryPriceSol
+            : 1);
+      const exitMcapValue = exitMultiple !== 1 && position.entryMcapSol > 0
+        ? position.entryMcapSol * exitMultiple
         : (position.peakMcapSol || position.entryMcapSol || 0);
       const exitMcap = exitMcapValue > 0
         ? formatMcapUsd(exitMcapValue)
         : 'N/A';
+
       // TP as percentage (convert first TP multiple to %)
       const firstTpPct = config.exit.takeProfitLevels?.[0]?.triggerMultiple
         ? ((config.exit.takeProfitLevels[0].triggerMultiple - 1) * 100).toFixed(0)
