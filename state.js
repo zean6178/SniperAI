@@ -116,6 +116,7 @@ export function savePosition(tokenMint, positionData) {
     tokenMint,
     openedAt: positionData.openedAt || new Date().toISOString(),
     peakPriceSol: positionData.entryPriceSol || 0,
+    peakMcapSol: positionData.entryMcapSol || 0,
     peakMultiple: 1.0,
     soldPct: 0,
     sellHistory: [],
