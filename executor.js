@@ -564,7 +564,17 @@ export async function sellToken({ mint, sellPct, slippageBps, tradeValueSol, ent
   if (isDry) {
     console.log(chalk.yellow(`[executor] 🧪 DRY RUN — Sell ${sellPct}% of ${mint.slice(0, 8)}…`));
     // Dry run: gunakan real price dari bonding curve untuk simulated PnL
-    const currentPrice = await getTokenPrice(mint).catch(() => null);
+    let currentPrice = await getTokenPrice(mint).catch(() => null);
+
+    // ⭐ FIX: Fallback to PumpPortal WS cached price for pre-migration tokens
+    if (!currentPrice || currentPrice <= 0) {
+      try {
+        const { getCachedTradePrice } = await import('./detector.js');
+        const cached = getCachedTradePrice(mint);
+        if (cached?.priceSol > 0) currentPrice = cached.priceSol;
+      } catch {}
+    }
+
     let solReceived = 0;
 
     if (currentPrice && currentPrice > 0 && entryPriceSol > 0) {

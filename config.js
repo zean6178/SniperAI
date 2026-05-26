@@ -161,11 +161,11 @@ function buildConfig() {
     // ═══════════════════════════════════════════════════════════════════════════
     exit: {
       takeProfitLevels: [
-        { triggerMultiple: 3.0, sellPct: 50 },   // 3x → jual 50%
-        { triggerMultiple: 5.0, sellPct: 75 },   // 5x → jual 75% dari sisa
-        { triggerMultiple: 10.0, sellPct: 100 },  // 10x → full exit
+        { triggerMultiple: 2.0, sellPct: 50 },   // 2x → jual 50%
+        { triggerMultiple: 3.0, sellPct: 75 },   // 3x → jual 75% dari sisa
+        { triggerMultiple: 5.0, sellPct: 100 },  // 5x → full exit
       ],
-      stopLossPct:          -25,
+      stopLossPct:          -20,
       trailingStopPct:      15,
       maxHoldTimeMinutes:   10,      // Naikin: 5m → 10m biar token lebih waktu migrasi
       stalePriceMinutes:    2,       // Turun: 10m → 2 menit — force exit kalo no movement
