@@ -19,6 +19,73 @@ import { getBalance } from './executor.js';
 // Track last loss time (for cooldown)
 let lastLossTime = 0;
 
+// ─── Insufficient Balance Cooldown ────────────────────────────────────────────
+const INSUFFICIENT_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 jam
+const BALANCE_POLL_MS = 600_000; // Auto-check balance tiap 10 menit
+let insufficientBalanceSince = 0; // Timestamp when insufficient balance was first detected
+let balancePollInterval = null;
+
+function startBalanceWatcher() {
+  if (balancePollInterval) return;
+  balancePollInterval = setInterval(async () => {
+    if (insufficientBalanceSince === 0) return;
+    const config = getConfig();
+    if (config.isDryRun) return;
+    try {
+      const { solBalance } = await getBalance();
+      const minRequired = config.entry.buyAmountSol + config.risk.gasReserveSol;
+      if (solBalance >= minRequired) {
+        console.log(chalk.green(`[risk] 💰 Balance restored: ${solBalance.toFixed(4)} SOL — clearing insufficient balance cooldown`));
+        insufficientBalanceSince = 0;
+      }
+    } catch (e) {
+      // Silent — network errors are normal
+    }
+  }, BALANCE_POLL_MS);
+  console.log(chalk.gray(`[risk] 👁️ Balance watcher started (every 10m)`));
+}
+
+export function isBalanceCooldownActive() {
+  if (insufficientBalanceSince === 0) return false;
+  const elapsed = Date.now() - insufficientBalanceSince;
+  if (elapsed >= INSUFFICIENT_COOLDOWN_MS) {
+    console.log(chalk.green('[risk] ⏰ Insufficient balance cooldown expired (4h)'));
+    insufficientBalanceSince = 0;
+    return false;
+  }
+  return true;
+}
+
+function recordInsufficientBalance() {
+  if (insufficientBalanceSince === 0) {
+    insufficientBalanceSince = Date.now();
+    startBalanceWatcher();
+  }
+}
+
+// ─── Cached Balance ──────────────────────────────────────────────────────────
+let _cachedBalance = null;
+let _lastBalanceCheck = 0;
+const BALANCE_CACHE_MS = 30_000; // Refresh balance tiap 30 detik
+
+async function getCachedBalance() {
+  const config = getConfig();
+  // Di dry-run, gak perlu balance check sama sekali
+  if (config.isDryRun) {
+    return { solBalance: 999, address: 'DRY_RUN', lamports: 999e9 };
+  }
+  if (_cachedBalance && Date.now() - _lastBalanceCheck < BALANCE_CACHE_MS) {
+    return _cachedBalance;
+  }
+  try {
+    _cachedBalance = await getBalance();
+    _lastBalanceCheck = Date.now();
+    return _cachedBalance;
+  } catch (e) {
+    throw e;
+  }
+}
+
 export function recordLoss() {
   lastLossTime = Date.now();
 }
@@ -37,6 +104,26 @@ export async function preTradeRiskCheck() {
   const reasons = [];
   let canTrade = true;
 
+  // 0. Insufficient balance cooldown — skip fast jika masih cooldown
+  if (isBalanceCooldownActive()) {
+    const elapsed = Date.now() - insufficientBalanceSince;
+    const remainMs = INSUFFICIENT_COOLDOWN_MS - elapsed;
+    const remainHours = Math.ceil(remainMs / (60 * 60 * 1000) * 10) / 10;
+    const reason = `⏳ Insufficient balance cooldown: ${remainHours}h remaining (balance watcher active — will auto-resume when funds arrive)`;
+    console.log(chalk.yellow(`[risk] ${reason}`));
+    reasons.push(reason);
+    return { canTrade: false, reasons };
+  }
+
+  // 0b. Daily loss hard stop — -30% modal → stop all
+  const stats = getDailyStats();
+  const totalCapital = 2.0; // Asumsi modal 2 SOL (bisa diganti)
+  const dailyLossPct = totalCapital > 0 ? Math.abs(stats.totalPnlSol) / totalCapital * 100 : 0;
+  if (risk.dailyLossHardStopPct && dailyLossPct >= risk.dailyLossHardStopPct) {
+    canTrade = false;
+    reasons.push(`❌ DAILY HARD STOP: -${dailyLossPct.toFixed(0)}% today (limit: ${risk.dailyLossHardStopPct}%) — no more trades`);
+  }
+
   // 1. Max open positions
   const openCount = getOpenPositionCount();
   if (openCount >= risk.maxOpenPositions) {
@@ -45,7 +132,6 @@ export async function preTradeRiskCheck() {
   }
 
   // 2. Daily loss limit
-  const stats = getDailyStats();
   if (stats.totalPnlSol <= -risk.maxDailyLossSol) {
     canTrade = false;
     reasons.push(`❌ Daily loss limit hit: ${stats.totalPnlSol.toFixed(4)} SOL (max: -${risk.maxDailyLossSol})`);
@@ -57,17 +143,20 @@ export async function preTradeRiskCheck() {
     reasons.push(`❌ Max daily trades reached: ${stats.tradesCount}/${risk.maxDailyTrades}`);
   }
 
-  // 4. Gas reserve check
-  try {
-    const { solBalance } = await getBalance();
-    const minRequired = config.entry.buyAmountSol + risk.gasReserveSol;
-    if (solBalance < minRequired) {
+  // 4. Gas reserve check (skip in dry-run mode)
+  if (!config.isDryRun) {
+    try {
+      const { solBalance } = await getCachedBalance();
+      const minRequired = config.entry.buyAmountSol + risk.gasReserveSol;
+      if (solBalance < minRequired) {
+        canTrade = false;
+        reasons.push(`❌ Insufficient balance: ${solBalance.toFixed(4)} SOL < ${minRequired.toFixed(4)} (buy + gas)`);
+        recordInsufficientBalance();
+      }
+    } catch (e) {
       canTrade = false;
-      reasons.push(`❌ Insufficient balance: ${solBalance.toFixed(4)} SOL < ${minRequired.toFixed(4)} (buy + gas)`);
+      reasons.push(`❌ Balance check failed: ${e.message}`);
     }
-  } catch (e) {
-    canTrade = false;
-    reasons.push(`❌ Balance check failed: ${e.message}`);
   }
 
   // 5. Cooldown after loss
@@ -93,25 +182,37 @@ export async function preTradeRiskCheck() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
- * Calculate buy amount berdasarkan confidence score & balance
+ * Calculate buy amount berdasarkan mode & confidence score
  * @param {number} confidenceScore - 0-100 dari screening
+ * @param {object} [screenResult] - screening result dengan mode info
  * @returns {number} amount in SOL
  */
-export function calculateBuyAmount(confidenceScore) {
+export function calculateBuyAmount(confidenceScore, screenResult = null) {
   const config = getConfig();
   const entry = config.entry;
   const risk = config.risk;
 
   let amount = entry.buyAmountSol;
 
+  // Prioritaskan mode-specific size
+  if (screenResult?.mode && config.screening?.tradeModes?.[screenResult.mode]) {
+    const modeCfg = config.screening.tradeModes[screenResult.mode];
+    amount = modeCfg.sizeSol || entry.buyAmountSol;
+  }
+
   // Scaling berdasarkan confidence
-  if (entry.enableScaling) {
+  if (entry.enableScaling && !screenResult?.mode) {
     for (const tier of entry.scalingTiers) {
       if (confidenceScore >= tier.minScore) {
         amount = entry.buyAmountSol * tier.multiplier;
         break;
       }
     }
+  }
+
+  // Mayhem mode — kurangi size 50%
+  if (risk.mayhemSizeMultiplier && screenResult?.data?.mayhemActive) {
+    amount *= risk.mayhemSizeMultiplier;
   }
 
   // Clamp to max
@@ -137,12 +238,34 @@ export function checkExitConditions(position, currentPriceSol) {
 
   const priceChange = ((currentPriceSol - entryPrice) / entryPrice) * 100;
   const currentMultiple = currentPriceSol / entryPrice;
+  const soldPct = position.soldPct || 0;
 
-  // ── Update peak price (trailing stop reference) ────────────────────────────
+  // ── Determine phase ────────────────────────────────────────────────────────
+  // Phase 1 (Discovery): no TP hit yet → only hard SL, trailing OFF
+  // Phase 2 (Protection): 5x hit → trailing ON 20%
+  // Phase 3 (Runner): 7x hit → trailing tighten 12%
+  // Phase 4 (Moonbag): 10x+ hit → trailing tighten 12%, 15x full close
+  const tpLevelsHit = new Set(
+    (position.sellHistory || [])
+      .filter(s => s.type === 'take_profit')
+      .map(s => s.triggerMultiple)
+  );
+  const highestTp = Math.max(...tpLevelsHit, 0);
+  const phase = highestTp >= 10 ? 4
+              : highestTp >= 7  ? 3
+              : highestTp >= 5  ? 2
+              : 1;
+
+  // ── Peak price & trailing ──────────────────────────────────────────────────
   const peakPrice = Math.max(position.peakPriceSol || entryPrice, currentPriceSol);
   const dropFromPeak = peakPrice > 0 ? ((peakPrice - currentPriceSol) / peakPrice) * 100 : 0;
 
-  // ── 1. Stop Loss ──────────────────────────────────────────────────────────
+  const trailingPct = phase === 4 ? 12
+                    : phase === 3 ? 12
+                    : phase === 2 ? 20
+                    : 999;                // OFF di phase 1
+
+  // ── 1. Stop Loss (selalu aktif) ──────────────────────────────────────────
   if (priceChange <= exit.stopLossPct) {
     return {
       shouldExit: true,
@@ -152,26 +275,24 @@ export function checkExitConditions(position, currentPriceSol) {
     };
   }
 
-  // ── 2. Trailing Stop ──────────────────────────────────────────────────────
-  if (dropFromPeak >= exit.trailingStopPct && currentMultiple > 1.5) {
+  // ── 2. Trailing Stop (ONLY di phase 2+) ──────────────────────────────────
+  if (phase >= 2 && dropFromPeak >= trailingPct) {
     return {
       shouldExit: true,
-      reason: `📉 TRAILING STOP: dropped ${dropFromPeak.toFixed(1)}% from peak (threshold: ${exit.trailingStopPct}%)`,
+      reason: `📉 TRAILING STOP: dropped ${dropFromPeak.toFixed(1)}% from peak (threshold: ${trailingPct}%)`,
       sellPct: 100,
       type: 'trailing_stop',
     };
   }
 
-  // ── 3. Take Profit Levels (check from highest to lowest) ────────────────
-  const soldPct = position.soldPct || 0;
+  // ── 3. Take Profit Levels ────────────────────────────────────────────────
   const sortedLevels = [...exit.takeProfitLevels].sort((a, b) => b.triggerMultiple - a.triggerMultiple);
   for (const level of sortedLevels) {
     if (currentMultiple >= level.triggerMultiple) {
-      // Check apakah level ini sudah dijual
       const alreadySold = position.sellHistory?.some(
         s => s.triggerMultiple === level.triggerMultiple
       );
-      if (!alreadySold && soldPct < (100 - 5)) { // Keep 5% moonbag
+      if (!alreadySold && soldPct < (100 - 5)) {
         return {
           shouldExit: true,
           reason: `🎯 TAKE PROFIT: ${currentMultiple.toFixed(1)}x (trigger: ${level.triggerMultiple}x) → sell ${level.sellPct}%`,
@@ -183,7 +304,7 @@ export function checkExitConditions(position, currentPriceSol) {
     }
   }
 
-  // ── 4. Time-based Exit ────────────────────────────────────────────────────
+  // ── 4. Time-based Exit ──────────────────────────────────────────────────
   const holdTimeMin = (Date.now() - new Date(position.openedAt).getTime()) / 60000;
   if (holdTimeMin >= exit.maxHoldTimeMinutes && currentMultiple < 1.5) {
     return {
@@ -193,9 +314,6 @@ export function checkExitConditions(position, currentPriceSol) {
       type: 'time_exit',
     };
   }
-
-  // ── 5. Stale Price Exit ───────────────────────────────────────────────────
-  // (Handled di monitor.js via price tracking)
 
   return { shouldExit: false, reason: '', sellPct: 0 };
 }

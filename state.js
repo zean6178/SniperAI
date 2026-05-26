@@ -11,6 +11,16 @@ import dayjs from 'dayjs';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const STATE_PATH = resolve(__dirname, 'state.json');
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// IN-MEMORY CACHE — Hindari baca disk tiap function call
+// ═══════════════════════════════════════════════════════════════════════════════
+let _cachedState = null;
+let _lastSave = 0;
+const SAVE_DEBOUNCE_MS = 2000; // Nulis ke disk max tiap 2 detik
+const CACHE_TTL_MS = 2000;     // Baca dari cache selama 2 detik
+
+let _lastLoad = 0;
+
 // ─── Default State ────────────────────────────────────────────────────────────
 const DEFAULT_STATE = {
   positions: {},          // tokenMint → position data
@@ -35,7 +45,19 @@ function deepCloneDefault() {
 }
 
 function loadState() {
-  if (!existsSync(STATE_PATH)) return deepCloneDefault();
+  const now = Date.now();
+
+  // Return cached state kalo masih fresh
+  if (_cachedState && (now - _lastLoad) < CACHE_TTL_MS) {
+    return _cachedState;
+  }
+
+  if (!existsSync(STATE_PATH)) {
+    _cachedState = deepCloneDefault();
+    _lastLoad = now;
+    return _cachedState;
+  }
+
   try {
     const raw = JSON.parse(readFileSync(STATE_PATH, 'utf-8'));
     // Reset daily stats if new day
@@ -45,14 +67,29 @@ function loadState() {
       raw.closedToday = [];
     }
     const defaults = deepCloneDefault();
-    return { ...defaults, ...raw };
+    _cachedState = { ...defaults, ...raw };
+    _lastLoad = now;
+    return _cachedState;
   } catch {
-    return deepCloneDefault();
+    _cachedState = deepCloneDefault();
+    _lastLoad = now;
+    return _cachedState;
   }
 }
 
-function saveState(state) {
-  writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
+function saveState(state, force = false) {
+  _cachedState = state;
+  const now = Date.now();
+
+  // Debounce: jangan nulis ke disk kalo baru aja nulis (kecuali force)
+  if (!force && now - _lastSave < SAVE_DEBOUNCE_MS) return;
+
+  try {
+    writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
+    _lastSave = now;
+  } catch (e) {
+    console.warn(`[state] Write failed: ${e.message}`);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -83,7 +120,7 @@ export function savePosition(tokenMint, positionData) {
     soldPct: 0,
     sellHistory: [],
   };
-  saveState(state);
+  saveState(state, true); // ⭐ force = langsung nulis
 }
 
 export function updatePosition(tokenMint, updates) {
@@ -123,7 +160,7 @@ export function closePosition(tokenMint, closeData = {}) {
   if (pnl > 0) state.dailyStats.wins++;
   else state.dailyStats.losses++;
 
-  saveState(state);
+  saveState(state, true); // ⭐ force = langsung nulis
   return closed;
 }
 

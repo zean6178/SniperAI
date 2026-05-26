@@ -19,7 +19,7 @@ export default async function tradeRoutes(fastify) {
    * Construct unsigned buy transaction for mobile signing
    */
   fastify.post('/prepare-buy', { preHandler: [authGuard] }, async (request, reply) => {
-    const { mint, amountSol, slippageBps = 1500 } = request.body || {};
+    const { mint, amountSol, slippageBps = 1000 } = request.body || {};
 
     if (!mint || !amountSol) {
       return reply.code(400).send({
@@ -115,7 +115,7 @@ export default async function tradeRoutes(fastify) {
    * Construct unsigned sell transaction
    */
   fastify.post('/prepare-sell', { preHandler: [authGuard] }, async (request, reply) => {
-    const { mint, sellPct = 100, slippageBps = 1500 } = request.body || {};
+    const { mint, sellPct = 100, slippageBps = 1000 } = request.body || {};
 
     if (!mint) {
       return reply.code(400).send({

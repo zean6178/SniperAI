@@ -1,0 +1,41 @@
+{
+  "safe": {
+    "label": "🔒 Safe Mode",
+    "description": "Maximum safety, slow entries, social required",
+    "screening": {
+      "maxDevHoldingPct": 10, "maxTopHolderPct": 20, "maxTop10HolderPct": 50,
+      "minHolders": 10, "minLiquiditySol": 1.0, "minBuyCount5m": 5,
+      "minVolume5mSol": 0.5, "requireSocial": true, "maxTokenAgeMinutes": 30,
+      "minTokenAgeSeconds": 15, "snipeThreshold": 80, "watchThreshold": 60
+    },
+    "entry": { "buyAmountSol": 0.05, "slippageBps": 800 },
+    "exit": { "stopLossPct": -15, "trailingStopPct": 15, "maxHoldTimeMinutes": 30 },
+    "risk": { "maxOpenPositions": 3, "maxDailyTrades": 10 }
+  },
+  "degen": {
+    "label": "⚡ Degen Mode",
+    "description": "Fast entries, loose filters, volume focus",
+    "screening": {
+      "maxDevHoldingPct": 30, "maxTopHolderPct": 40, "maxTop10HolderPct": 75,
+      "minHolders": 3, "minLiquiditySol": 0.1, "minBuyCount5m": 2,
+      "minVolume5mSol": 0.05, "requireSocial": false, "maxTokenAgeMinutes": 5,
+      "minTokenAgeSeconds": 3, "snipeThreshold": 55, "watchThreshold": 35
+    },
+    "entry": { "buyAmountSol": 0.2, "slippageBps": 2500 },
+    "exit": { "stopLossPct": -40, "trailingStopPct": 30, "maxHoldTimeMinutes": 5 },
+    "risk": { "maxOpenPositions": 20, "maxDailyTrades": 200 }
+  },
+  "ape": {
+    "label": "🦍 Ape Mode",
+    "description": "YOLO — minimal filters, maximum speed",
+    "screening": {
+      "maxDevHoldingPct": 50, "maxTopHolderPct": 60, "maxTop10HolderPct": 90,
+      "minHolders": 1, "minLiquiditySol": 0.01, "minBuyCount5m": 0,
+      "minVolume5mSol": 0, "requireSocial": false, "maxTokenAgeMinutes": 2,
+      "minTokenAgeSeconds": 0, "snipeThreshold": 30, "watchThreshold": 15
+    },
+    "entry": { "buyAmountSol": 0.5, "slippageBps": 3500 },
+    "exit": { "stopLossPct": -60, "trailingStopPct": 40, "maxHoldTimeMinutes": 2 },
+    "risk": { "maxOpenPositions": 50, "maxDailyTrades": 500 }
+  }
+}

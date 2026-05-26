@@ -16,6 +16,7 @@ import chalk from 'chalk';
 import { getConfig } from './config.js';
 import { onWsToken, onServerSignal, onTrendingData } from './merger.js';
 import { isDeployerBlacklisted, isTokenBlacklisted } from './state.js';
+import { startRpcDetector as _startRpcDetector, stopRpcDetector as _stopRpcDetector } from './rpc-ws-detector.js';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PUMP.FUN WEBSOCKET LISTENER
@@ -49,6 +50,9 @@ export function startDetector() {
   console.log(chalk.cyan('[detector] 🔌 Connecting to PumpPortal WebSocket...'));
   connect();
 
+  // Start RPC WebSocket detector — 4th source (logsSubscribe via RPC)
+  _startRpcDetector();
+
   // Start hybrid polling (Signal Server + Trending)
   if (getConfig().hybrid?.enabled) {
     startHybridPolling();
@@ -64,6 +68,7 @@ export function stopDetector() {
     ws.close();
     ws = null;
   }
+  _stopRpcDetector();
   console.log(chalk.yellow('[detector] 🔌 Disconnected'));
 }
 
@@ -75,10 +80,13 @@ function connect() {
     reconnectAttempts = 0;
     console.log(chalk.green('[detector] ✅ Connected to PumpPortal'));
 
-    // Subscribe
+    // Subscribe — new tokens + trades (API key funded ✅)
     ws.send(JSON.stringify({ method: 'subscribeNewToken' }));
-    ws.send(JSON.stringify({ method: 'subscribeTokenTrade' }));
-    console.log(chalk.green('[detector] 📡 Subscribed to new tokens & trades'));
+    if (getConfig().hybrid.pumpPortalApiKey) {
+      console.log(chalk.green('[detector] 📡 PumpPortal API key detected — trade data active'));
+    } else {
+      console.log(chalk.yellow('[detector] ⚠️ No PumpPortal API key — trade data unavailable'));
+    }
 
     // Start ping/pong
     pingInterval = setInterval(() => {
@@ -221,8 +229,13 @@ function handleTrade(msg) {
   }
 
   const tracker = tradeTracker.get(mint);
-  if (trade.type === 'buy') tracker.buys.push(trade);
-  else tracker.sells.push(trade);
+  if (trade.type === 'buy') {
+    tracker.buys.push(trade);
+    if (tracker.buys.length > 200) tracker.buys = tracker.buys.slice(-100);
+  } else {
+    tracker.sells.push(trade);
+    if (tracker.sells.length > 200) tracker.sells = tracker.sells.slice(-100);
+  }
   tracker.lastUpdate = Date.now();
 
   // Cleanup
@@ -254,12 +267,17 @@ function startHybridPolling() {
   }
 }
 
+// Dedup — cegah signal server re-process sinyal lama
+const _seenServerSignals = new Set();
+const SIGNAL_DEDUP_WINDOW_MS = 5 * 60 * 1000; // 5 menit
+
 // ─── Signal Server — api.thecharon.xyz ────────────────────────────────────────
 // ✅ FIX #3: Log errors (not silent) + FIX #4: Pagination support
 async function fetchSignalServer() {
   const hy = getConfig().hybrid;
   let page = 1;
   let totalProcessed = 0;
+  let newSignals = 0;
 
   try {
     while (true) {
@@ -283,8 +301,14 @@ async function fetchSignalServer() {
 
       for (const sig of signals) {
         if (!sig.mint) continue;
+
+        // ✅ Dedup — cegah reprocess sinyal lama yang sudah pernah masuk
+        if (_seenServerSignals.has(sig.mint)) continue;
+        _seenServerSignals.add(sig.mint);
+
         onServerSignal(sig);
         totalProcessed++;
+        newSignals++;
       }
 
       // Stop if less than limit returned (no more pages)
@@ -296,16 +320,27 @@ async function fetchSignalServer() {
     }
 
     if (totalProcessed > 0) {
-      console.log(chalk.gray(`[hybrid:server] ${totalProcessed} signals processed (${page} page(s))`));
+      console.log(chalk.gray(`[hybrid:server] ${totalProcessed} signals (${newSignals} new, ${totalProcessed - newSignals} deduped) — ${page} page(s)`));
     }
+
+    // Prune seen set biar gak bocor memory
+    _pruneSeenSignals();
   } catch (e) {
-    // ✅ FIX #3: Log error instead of silent swallow
     if (e.name === 'TimeoutError' || e.name === 'AbortError') {
       console.warn(chalk.yellow(`[hybrid:server] Timeout fetching signals`));
     } else {
       console.warn(chalk.yellow(`[hybrid:server] Error: ${e.message}`));
     }
   }
+}
+
+function _pruneSeenSignals() {
+  // Hanya prune kalau set terlalu besar (>1000 entries)
+  if (_seenServerSignals.size < 1000) return;
+  // Reset periodic — signal server biasanya return signal yg sama
+  // dalam window pendek, reset aman dilakukan
+  _seenServerSignals.clear();
+  console.log(chalk.gray('[hybrid:server] Pruned seen signal cache'));
 }
 
 // ─── Jupiter Trending API ────────────────────────────────────────────────────
@@ -335,7 +370,11 @@ async function fetchTrending() {
       });
     }
   } catch (e) {
-    // Silent
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+      console.warn(chalk.yellow(`[hybrid:trending] Timeout`));
+    } else {
+      console.warn(chalk.yellow(`[hybrid:trending] Error: ${e.message}`));
+    }
   }
 }
 
@@ -380,7 +419,7 @@ export function getTradeStats(mint, windowMs = 5 * 60 * 1000) {
     totalBuySol,
     totalSellSol,
     uniqueBuyers,
-    buyPressure:  totalBuySol > 0 ? totalBuySol / (totalBuySol + totalSellSol) : 0,
+    buyPressure:  totalBuySol > 0 && totalSellSol >= 0 ? totalBuySol / (totalBuySol + totalSellSol) : 0.5,
     isBundled,
     bundleCount:  bundleBuys.length,
     latestMcapSol: latestMcap,
@@ -395,4 +434,62 @@ export function getDetectorStatus() {
     recentTokens:    recentTokens.size,
     reconnectAttempts,
   };
+}
+
+/**
+ * Subscribe to trades for a specific token mint via PumpPortal WS.
+ * NOTE: Only works with an API key funded with 0.02+ SOL.
+ * Without funding, use on-chain RPC fallback in screening.js instead.
+ */
+export function subscribeTokenTrades(mint) {
+  if (!mint) return;
+  try {
+    if (ws?.readyState === WebSocket.OPEN) {
+      const msg = { method: 'subscribeTokenTrade', keys: [mint] };
+      const apiKey = getConfig().hybrid.pumpPortalApiKey;
+      if (apiKey) msg.apiKey = apiKey;
+      ws.send(JSON.stringify(msg));
+    }
+  } catch (e) {
+    console.warn(chalk.yellow(`[detector] ⚠️ Failed to subscribe trades for ${mint.slice(0, 8)}: ${e.message}`));
+  }
+}
+
+/**
+ * Get cached price from trade tracker (PumpPortal WS)
+ * Returns { priceSol, mcapSol } or null if no trade data
+ */
+export function getCachedTradePrice(mint) {
+  const tracker = tradeTracker.get(mint);
+  if (!tracker) return null;
+
+  // Get latest trade (buy or sell)
+  const allTrades = [...(tracker.buys || []), ...(tracker.sells || [])];
+  if (allTrades.length === 0) return null;
+
+  // Sort by timestamp descending
+  allTrades.sort((a, b) => b.timestamp - a.timestamp);
+  const latest = allTrades[0];
+
+  // Calculate price from latest trade
+  const solAmount = latest.solAmount || 0;
+  const tokenAmt = latest.tokenAmt || 0;
+  let priceSol = null;
+  if (solAmount > 0 && tokenAmt > 0) {
+    priceSol = solAmount / tokenAmt;
+  }
+
+  return {
+    priceSol,
+    mcapSol: latest.mcapSol || null,
+    timestamp: latest.timestamp,
+  };
+}
+
+/**
+ * Get cached MCap from latest trade
+ */
+export function getCachedMcap(mint) {
+  const data = getCachedTradePrice(mint);
+  return data?.mcapSol || null;
 }

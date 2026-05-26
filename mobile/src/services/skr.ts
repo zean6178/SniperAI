@@ -10,7 +10,7 @@
 import { api } from './api';
 
 // SKR Token Mint (Solana Mobile ecosystem token)
-export const SKR_MINT = 'SKRTokenMintAddressPlaceholder1111111111111';
+export const SKR_MINT = 'SKRbvo6Gf7GondiT3BbTfuRDPqLWei4j2Qy2NPGZhW3';
 export const SKR_DECIMALS = 9;
 
 // Seeker Genesis Token (SGT) — for discount verification

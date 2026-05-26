@@ -5,7 +5,7 @@
  * Pipeline:
  * 1. Pre-filter (age, blacklist) ← sudah di detector.js
  * 2. On-chain analysis (holders, dev wallet, bundling)
- * 3. Volume & momentum check
+ * 3. Volume & momentum check (dari WS trade data)
  * 4. Confidence scoring
  * 5. Decision: SNIPE | WATCH | SKIP
  */
@@ -15,7 +15,34 @@ import chalk from 'chalk';
 import { getConfig } from './config.js';
 import { getTradeStats } from './detector.js';
 import { isDeployerBlacklisted, addDeployerToBlacklist } from './state.js';
-import { getConnection } from './executor.js';
+import { getConnection, rotateRpc } from './executor.js';
+import { checkMayhemState } from './mayhem-check.js';
+import { checkToken, getRugScoreBonus } from './rugcheck.js';
+import { standardBundleCheck } from './bundle-detector.js';
+import { recordTokenScan, getMarketCondition } from './market-conditions.js';
+
+// ─── RPC Queue — sequential RPC calls, max 1 per 200ms ────────────────────────
+const RPC_INTERVAL_MS = 200;
+let _rpcQueue = Promise.resolve();
+
+async function queuedRpc(fn, label) {
+  const prev = _rpcQueue;
+  let release;
+  _rpcQueue = new Promise(resolve => { release = resolve; });
+  await prev;
+  await new Promise(r => setTimeout(r, RPC_INTERVAL_MS));
+  try {
+    return await fn();
+  } finally {
+    release();
+  }
+}
+
+// Skip RPC-heavy checks entirely when fast-screening (via score < threshold)
+function shouldSkipOnChain(config, tokenData) {
+  const fastScore = tokenData.fastScore ?? tokenData._mergerScore ?? 0;
+  return config.screening.skipOnChainIfLowScore && fastScore < (config.screening.onChainMinScore || 50);
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN SCREENING FUNCTION
@@ -23,7 +50,7 @@ import { getConnection } from './executor.js';
 
 /**
  * Evaluasi token baru → return decision + confidence score
- * @param {object} tokenData - dari detector.js
+ * @param {object} tokenData - dari index.js (via merger → handleNewToken)
  * @returns {Promise<{decision: string, score: number, reasons: string[], data: object}>}
  */
 export async function runScreening(tokenData) {
@@ -33,6 +60,24 @@ export async function runScreening(tokenData) {
   let score = 50; // Base score
 
   console.log(chalk.blue(`[screen] 🔬 Screening: ${tokenData.symbol} (${tokenData.mint?.slice(0, 8)}…)`));
+
+  // Record token scan for market velocity tracking
+  recordTokenScan();
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STEP 0: Mayhem Mode Check — hindari token mayhem/paused
+  // ═══════════════════════════════════════════════════════════════════════════
+  const mayhem = await checkMayhemState(tokenData.mint);
+  if (mayhem.isMayhem && mayhem.mayhemState === 'paused') {
+    const reason = mayhem.reason || 'unknown';
+    console.log(chalk.yellow(`[screen] 🚫 Mayhem PAUSED: ${tokenData.symbol} (${reason})`));
+    return makeDecision('SKIP', 0, [`🚫 Mayhem paused: ${reason}`], tokenData);
+  }
+  if (mayhem.isMayhem && mayhem.mayhemState === 'active') {
+    // Mayhem active = normal baru Pump.fun — kasi penalty kecil aja
+    score -= 10;
+    reasons.push('⚠️ Mayhem mode (no Raydium migration)');
+  }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 1: Token Age Check
@@ -50,8 +95,66 @@ export async function runScreening(tokenData) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // STEP 2: Trade Stats Analysis (dari WebSocket data)
+  // STEP 1b: RugCheck.xyz — Token Safety Verification
   // ═══════════════════════════════════════════════════════════════════════════
+  if (sc.rugcheck?.enabled) {
+    try {
+      const rugCheck = await checkToken(tokenData.mint, {
+        minScore: sc.rugcheck.minScore || 300,
+        skipOnCriticalRisk: sc.rugcheck.skipOnCriticalRisk !== false,
+      });
+
+      // ── Explicit mint/freeze authority labels ──────────────────────────
+      const criticalNames = rugCheck.criticalRisks.map(r => r.toLowerCase());
+
+      // Mint authority: if NOT in critical risks, it's revoked (good)
+      const mintActive = criticalNames.some(r => r.includes('mint authority'));
+      const freezeActive = criticalNames.some(r => r.includes('freeze authority'));
+
+      if (!mintActive) {
+        reasons.push('✅ Mint authority revoked');
+        console.log(chalk.green(`  └ [rugcheck] ✅ Mint authority revoked`));
+      } else {
+        reasons.push('❌ Mint authority still active!');
+        console.log(chalk.red(`  └ [rugcheck] ❌ Mint authority still active → SKIP`));
+      }
+
+      if (!freezeActive) {
+        reasons.push('✅ Freeze authority revoked');
+        console.log(chalk.green(`  └ [rugcheck] ✅ Freeze authority revoked`));
+      } else {
+        reasons.push('❌ Freeze authority active!');
+        console.log(chalk.red(`  └ [rugcheck] ❌ Freeze authority active → SKIP`));
+      }
+
+      // ── Skip on critical risk (mint/freeze still active) ──────────────
+      if (rugCheck.shouldSkip && rugCheck.skipReason) {
+        reasons.push(`❌ ${rugCheck.skipReason}`);
+        return makeDecision('SKIP', 0, reasons, tokenData);
+      }
+
+      // Add score bonus/penalty from rugcheck
+      const rugBonus = await getRugScoreBonus(tokenData.mint);
+      if (rugBonus.label) {
+        score += rugBonus.bonus;
+        reasons.push(rugBonus.label);
+      }
+    } catch (e) {
+      if (!sc.rugcheck.skipOnApiError) {
+        console.warn(chalk.yellow(`[screen] RugCheck error (non-blocking): ${e.message}`));
+      } else {
+        reasons.push('⏭️ RugCheck unavailable (API error)');
+      }
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // STEP 2: Trade Stats Analysis
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Priority: in-memory WS trade data (if available — requires funded PumpPortal key)
+  // On-chain RPC fetch is SKIPPED for now due to rate limits on free Helius RPC.
+  // The merger score (_mergerScore) already accounts for signal strength.
   const tradeStats = getTradeStats(tokenData.mint, 5 * 60 * 1000);
 
   if (tradeStats) {
@@ -99,47 +202,57 @@ export async function runScreening(tokenData) {
       reasons.push(`🚫 Possible bundle: ${tradeStats.bundleCount} wallets bought in <2s`);
     }
   } else {
-    // No trade data yet — too early, put on watch
-    reasons.push('⏳ No trade data yet — watching');
-    score -= 5;
+    // No WS trade data — merger score should be sufficient
+    const mergerBonus = Math.max(0, ((tokenData._mergerScore || 0) - 50) * 0.5);
+    score += mergerBonus;
+    reasons.push(`📡 Merger score: ${tokenData._mergerScore || 'N/A'}/100 (+${mergerBonus.toFixed(0)} baseline)`);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 3: On-Chain Holder Analysis
   // ═══════════════════════════════════════════════════════════════════════════
-  const holderData = await analyzeHolders(tokenData.mint);
 
-  if (holderData) {
-    // Holder count
-    if (holderData.holderCount >= sc.minHolders) {
-      score += 10;
-      reasons.push(`✅ Holders: ${holderData.holderCount}`);
-    } else {
-      score -= 10;
-      reasons.push(`⚠️ Low holders: ${holderData.holderCount} < ${sc.minHolders}`);
-    }
+  // Skip on-chain analysis untuk token fast-score rendah (RPC optimization)
+  // atau token yang terlalu baru (< 3 detik) — belum ada holder data anyway
+  const ageNow = Date.now() - (tokenData.timestamp || Date.now());
+  const skipChain = shouldSkipOnChain(config, tokenData) || ageNow < 3000;
+  if (skipChain) {
+    reasons.push('⏭️ Skipped on-chain (low fast-score)');
+  } else {
+    const holderData = await analyzeHolders(tokenData.mint);
 
-    // Top holder concentration
-    if (holderData.topHolderPct > sc.maxTopHolderPct) {
-      score -= 20;
-      reasons.push(`🚫 Top holder owns ${holderData.topHolderPct.toFixed(1)}% (max: ${sc.maxTopHolderPct}%)`);
-    }
+    if (holderData) {
+      // Holder count
+      if (holderData.holderCount >= sc.minHolders) {
+        score += 10;
+        reasons.push(`✅ Holders: ${holderData.holderCount}`);
+      } else {
+        score -= 10;
+        reasons.push(`⚠️ Low holders: ${holderData.holderCount} < ${sc.minHolders}`);
+      }
 
-    if (holderData.top10HolderPct > sc.maxTop10HolderPct) {
-      score -= 15;
-      reasons.push(`🚫 Top 10 hold ${holderData.top10HolderPct.toFixed(1)}% (max: ${sc.maxTop10HolderPct}%)`);
-    } else {
-      score += 5;
-      reasons.push(`✅ Top 10 hold ${holderData.top10HolderPct.toFixed(1)}%`);
-    }
+      // Top holder concentration
+      if (holderData.topHolderPct > sc.maxTopHolderPct) {
+        score -= 20;
+        reasons.push(`🚫 Top holder owns ${holderData.topHolderPct.toFixed(1)}% (max: ${sc.maxTopHolderPct}%)`);
+      }
 
-    // Dev holding
-    if (holderData.devHoldingPct > sc.maxDevHoldingPct) {
-      score -= 25;
-      reasons.push(`🚫 Dev holds ${holderData.devHoldingPct.toFixed(1)}% (max: ${sc.maxDevHoldingPct}%)`);
-    } else {
-      score += 10;
-      reasons.push(`✅ Dev holding safe: ${holderData.devHoldingPct.toFixed(1)}%`);
+      if (holderData.top10HolderPct > sc.maxTop10HolderPct) {
+        score -= 15;
+        reasons.push(`🚫 Top 10 hold ${holderData.top10HolderPct.toFixed(1)}% (max: ${sc.maxTop10HolderPct}%)`);
+      } else {
+        score += 5;
+        reasons.push(`✅ Top 10 hold ${holderData.top10HolderPct.toFixed(1)}%`);
+      }
+
+      // Dev holding
+      if (holderData.devHoldingPct > sc.maxDevHoldingPct) {
+        score -= 25;
+        reasons.push(`🚫 Dev holds ${holderData.devHoldingPct.toFixed(1)}% (max: ${sc.maxDevHoldingPct}%)`);
+      } else {
+        score += 10;
+        reasons.push(`✅ Dev holding safe: ${holderData.devHoldingPct.toFixed(1)}%`);
+      }
     }
   }
 
@@ -175,6 +288,19 @@ export async function runScreening(tokenData) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // STEP 5b: Narrative Keywords — bonus untuk tren nama token
+  // ═══════════════════════════════════════════════════════════════════════════
+  if (sc.narrativeKeywords?.length) {
+    const nameLower = (tokenData.symbol || tokenData.name || '').toLowerCase();
+    const matchedKeyword = sc.narrativeKeywords.find(k => nameLower.includes(k));
+    if (matchedKeyword) {
+      const bonus = sc.narrativeBonusScore || 10;
+      score += bonus;
+      reasons.push(`🔥 Narrative match: "${matchedKeyword}" (+${bonus})`);
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // STEP 6: Social/Metadata Check (opsional)
   // ═══════════════════════════════════════════════════════════════════════════
   if (sc.requireSocial && tokenData.uri) {
@@ -183,7 +309,7 @@ export async function runScreening(tokenData) {
       score += 5;
       reasons.push('✅ Has social links');
     } else {
-      score -= 10;
+      score -= 5;
       reasons.push('⚠️ No social presence');
     }
   }
@@ -194,15 +320,57 @@ export async function runScreening(tokenData) {
   score = Math.max(0, Math.min(100, score));
 
   let decision;
-  if (score >= 70) {
+  if (score >= sc.snipeThreshold) {
     decision = 'SNIPE';
-  } else if (score >= 50) {
+  } else if (score >= sc.watchThreshold) {
     decision = 'WATCH';
   } else {
     decision = 'SKIP';
   }
 
-  return makeDecision(decision, score, reasons, tokenData);
+  // ── Assign trade mode berdasarkan token age & bonding curve ──
+  let assignedMode = null;
+
+  if (decision === 'SNIPE' && sc.tradeModes) {
+    for (const [modeName, modeCfg] of Object.entries(sc.tradeModes)) {
+      if (!modeCfg.enabled) continue;
+      const [curveMin, curveMax] = modeCfg.bondingCurveRange || [0, 100];
+      if (ageSeconds <= modeCfg.tokenAgeMaxSec && bondingPct !== null) {
+        const curvePct = typeof bondingPct === 'number' ? bondingPct : (bondingPct.progress ?? 0);
+        if (curvePct >= curveMin && curvePct <= curveMax) {
+          assignedMode = modeName;
+          reasons.push(`${modeCfg.label} — ${modeCfg.description}`);
+          break;
+        }
+      }
+    }
+  }
+
+  // ── Auto mode switch — override with market conditions ──
+  if (decision === 'SNIPE' && sc.autoModeSwitch?.enabled) {
+    const marketCond = getMarketCondition();
+    if (marketCond.recommendedMode && sc.tradeModes?.[marketCond.recommendedMode]?.enabled) {
+      const oldMode = assignedMode;
+      assignedMode = marketCond.recommendedMode;
+
+      // Log the reasons from market conditions
+      for (const r of marketCond.reasons) {
+        console.log(chalk.cyan(`  └ [market] ${r}`));
+      }
+
+      if (oldMode && oldMode !== assignedMode) {
+        const oldLabel = sc.tradeModes[oldMode]?.label || oldMode;
+        const newLabel = sc.tradeModes[assignedMode]?.label || assignedMode;
+        const msg = `🔄 Market override: ${oldLabel} → ${newLabel} (vel: ${marketCond.velocity}/min, vol: ${marketCond.volatility})`;
+        reasons.push(msg);
+        console.log(chalk.magenta(`  └ ${msg}`));
+      } else {
+        reasons.push(`📊 Market confirms: ${sc.tradeModes[assignedMode]?.label || assignedMode}`);
+      }
+    }
+  }
+
+  return makeDecision(decision, score, reasons, tokenData, assignedMode);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -220,7 +388,10 @@ async function analyzeHolders(mint) {
     // Get token largest accounts
     const connection = getConnection();
     const mintPubkey = await import('@solana/web3.js').then(m => new m.PublicKey(mint));
-    const accounts = await connection.getTokenLargestAccounts(mintPubkey);
+    const accounts = await queuedRpc(() =>
+      connection.getTokenLargestAccounts(mintPubkey),
+      `holders(${mint.slice(0, 8)})`
+    );
 
     if (!accounts?.value?.length) return null;
 
@@ -243,6 +414,8 @@ async function analyzeHolders(mint) {
     };
   } catch (e) {
     console.warn(`[screen] analyzeHolders error: ${e.message}`);
+    // Auto-rotate RPC key
+    try { rotateRpc(); } catch(_) {}
     return null;
   }
 }
@@ -252,92 +425,119 @@ async function analyzeHolders(mint) {
  * Pump.fun bonding curve = 85 SOL to graduate
  */
 async function getBondingCurveProgress(mint, bondingCurveAddress) {
+  // Cek mayhem cache dulu (lebih cepet & akurat)
   try {
-    if (!bondingCurveAddress) return null;
+    const { checkMayhemState } = await import('./mayhem-check.js');
+    const mayhem = await checkMayhemState(mint);
+    if (mayhem.bondingCurvePct !== null && mayhem.bondingCurvePct !== undefined) {
+      return mayhem.bondingCurvePct;
+    }
+  } catch (_) {}
 
-    const connection = getConnection();
-    const { PublicKey } = await import('@solana/web3.js');
-    const accountInfo = await connection.getBalance(new PublicKey(bondingCurveAddress));
-    const solInCurve = accountInfo / 1e9;
+  // Fallback: on-chain
+  try {
+    if (bondingCurveAddress) {
+      const { PublicKey } = await import('@solana/web3.js');
+      const connection = getConnection();
+      const curvePubkey = new PublicKey(bondingCurveAddress);
+      const accountInfo = await queuedRpc(() =>
+        connection.getAccountInfo(curvePubkey),
+        `bonding(${mint.slice(0, 8)})`
+      );
 
-    // Pump.fun bonding curve graduates at ~85 SOL
-    const GRADUATION_SOL = 85;
-    const progress = (solInCurve / GRADUATION_SOL) * 100;
-
-    return Math.min(progress, 100);
+      if (accountInfo?.data) {
+        const data = Buffer.from(accountInfo.data);
+        if (data.length >= 40) {
+          try {
+            const totalRaised = Number(data.readBigUInt64LE(32));
+            const pct = Math.min(100, (totalRaised / 85_000_000_000) * 100);
+            return pct;
+          } catch (_) {}
+        }
+      }
+    }
+    return null;
   } catch (e) {
     return null;
   }
 }
 
 /**
- * Check deployer's history (apakah pernah rug?)
+ * Check deployer history — apakah deployer pernah melakukan rug sebelumnya
  */
+// ─── Deployer History Cache — hindari RPC call berulang
+const _deployerCache = new Map();
+const DEPLOYER_CACHE_TTL = 10 * 60 * 1000; // 10 menit
+
 async function checkDeployerHistory(deployer) {
   if (!deployer) return { isRisky: false, hasHistory: false };
 
-  const config = getConfig();
-  if (!config.heliusApiKey) return { isRisky: false, hasHistory: false };
+  // Cek cache dulu
+  const cached = _deployerCache.get(deployer);
+  if (cached && (Date.now() - cached.ts) < DEPLOYER_CACHE_TTL) {
+    return cached.result;
+  }
 
   try {
-    // Check via Helius: get deployer's recent transactions
-    const res = await axios.get(
-      `https://api.helius.xyz/v0/addresses/${deployer}/transactions`,
-      {
-        params: { 'api-key': config.heliusApiKey, limit: 20, type: 'TOKEN_MINT' },
-        timeout: 5000,
-      }
-    );
-
-    const txns = res.data || [];
-
-    // Jika deployer sudah launch >5 token dalam 24 jam = serial deployer (risky)
-    const oneDayAgo = Date.now() / 1000 - 86400;
-    const recentMints = txns.filter(tx => (tx.timestamp || 0) > oneDayAgo);
-
-    if (recentMints.length > 5) {
-      return {
-        isRisky: true,
-        hasHistory: true,
-        reason: `Serial deployer: ${recentMints.length} tokens in 24h`,
-      };
+    // Check blacklist first (quick in-memory check)
+    if (isDeployerBlacklisted(deployer)) {
+      const result = { isRisky: true, hasHistory: true, reason: 'In blacklist' };
+      _deployerCache.set(deployer, { ts: Date.now(), result });
+      return result;
     }
 
-    return { isRisky: false, hasHistory: txns.length > 0 };
+    // Simple heuristic: check deployer's recent transaction count
+    const connection = getConnection();
+    const { PublicKey } = await import('@solana/web3.js');
+    const deployerPubkey = new PublicKey(deployer);
+
+    const sigs = await queuedRpc(() =>
+      connection.getSignaturesForAddress(deployerPubkey, { limit: 20 }),
+      `deployer(${deployer.slice(0, 8)})`
+    );
+
+    const result = (sigs && sigs.length > 10)
+      ? { isRisky: false, hasHistory: true }
+      : { isRisky: false, hasHistory: false };
+
+    _deployerCache.set(deployer, { ts: Date.now(), result });
+    return result;
   } catch (e) {
     return { isRisky: false, hasHistory: false };
   }
 }
 
 /**
- * Check apakah token punya social presence (dari metadata URI)
+ * Periksa social presence dari metadata URI token
  */
 async function checkSocialPresence(uri) {
   if (!uri) return false;
   try {
-    const res = await axios.get(uri, { timeout: 3000 });
-    const meta = res.data;
-    const hasTwitter = !!(meta?.twitter || meta?.extensions?.twitter);
-    const hasTelegram = !!(meta?.telegram || meta?.extensions?.telegram);
-    const hasWebsite = !!(meta?.website || meta?.extensions?.website);
-    return hasTwitter || hasTelegram || hasWebsite;
-  } catch {
+    const res = await axios.get(uri, { timeout: 5000, signal: AbortSignal.timeout(5000) });
+    if (!res.data) return false;
+
+    const body = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
+    const hasSocial = /twitter|x\.com|telegram|discord|website/i.test(body);
+    return hasSocial;
+  } catch (e) {
     return false;
   }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HELPER
+// HELPER — Decision Formatter
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function makeDecision(decision, score, reasons, tokenData) {
-  const emoji = decision === 'SNIPE' ? '🎯' : decision === 'WATCH' ? '👀' : '❌';
-  console.log(chalk.yellow(
-    `[screen] ${emoji} ${decision} | Score: ${score}/100 | ${tokenData.symbol} (${tokenData.mint?.slice(0, 8)}…)`
-  ));
+function makeDecision(decision, score, reasons, tokenData, assignedMode = null) {
+  console.log(
+    chalk[score >= 70 ? 'green' : score >= 50 ? 'yellow' : 'red'](
+      `[screen] ${decision === 'SNIPE' ? '✅' : decision === 'WATCH' ? '👀' : '❌'} ${decision} | Score: ${score}/100 | ${tokenData.symbol}`
+    )
+  );
 
-  if (reasons.length > 0 && decision !== 'SKIP') {
-    reasons.forEach(r => console.log(chalk.gray(`         ${r}`)));
+  // Log reasons in detail
+  for (const r of reasons) {
+    console.log(chalk.gray(`  └ ${r}`));
   }
 
   return {
@@ -345,6 +545,6 @@ function makeDecision(decision, score, reasons, tokenData) {
     score,
     reasons,
     data: tokenData,
-    timestamp: new Date().toISOString(),
+    mode: assignedMode,
   };
 }

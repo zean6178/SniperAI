@@ -17,6 +17,7 @@ import {
 import { sellToken, getTokenPrice, getTokenBalance } from './executor.js';
 import { checkExitConditions, detectRug, recordLoss } from './risk.js';
 import { sendTelegram } from './telegram.js';
+import { formatMcapUsd } from './telegram-ui.js';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MONITOR LOOP
@@ -49,6 +50,45 @@ export function getMonitorStatus() {
   return { isMonitoring, positions: Object.keys(getOpenPositions()).length };
 }
 
+/**
+ * reconcileNow() — Sync on-chain balances with state.
+ * In DRY_RUN, this is a no-op since there are no real positions.
+ */
+export async function reconcileNow() {
+  const config = getConfig();
+  if (config.isDryRun) {
+    console.log(chalk.gray('[monitor] ⏭️ reconcileNow skipped — DRY_RUN mode'));
+    return { skipped: true, reason: 'DRY_RUN — no real on-chain positions to reconcile' };
+  }
+
+  console.log(chalk.cyan('[monitor] 🔄 Reconciling on-chain balances…'));
+  const positions = getOpenPositions();
+  const mints = Object.keys(positions);
+
+  let cleaned = 0;
+  for (const mint of mints) {
+    try {
+      const balance = await getTokenBalance(mint);
+      if (balance === 0) {
+        const pos = positions[mint];
+        console.log(chalk.yellow(`[monitor] 🧹 Closing ${pos.symbol} (${mint.slice(0, 8)}…) — on-chain balance is zero`));
+        closePositionState(mint, {
+          pnlSol: 0,
+          closeReason: '🧹 Stale Position Auto-Closed — on-chain balance zero',
+          closeType: 'reconciliation',
+          soldPct: 100,
+        });
+        cleaned++;
+      }
+    } catch (e) {
+      console.warn(chalk.yellow(`[monitor] ⚠️ reconcileNow error for ${mint.slice(0, 8)}: ${e.message}`));
+    }
+  }
+
+  console.log(chalk.green(`[monitor] ✅ Reconciliation complete — cleaned ${cleaned} stale position(s)`));
+  return { cleaned };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MONITOR CYCLE — Runs every X seconds
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -76,12 +116,25 @@ async function evaluatePosition(mint, position) {
   const currentPriceSol = await getTokenPrice(mint);
   if (currentPriceSol === null) {
     // Price unavailable — could be pre-migration token (not on Jupiter yet)
-    // DON'T emergency sell just because price is unavailable!
-    // Only trigger stale exit if we previously HAD a price and now lost it.
     const hadPriceBefore = position.currentPriceSol && position.currentPriceSol > 0;
     const lastPriceCheck = position.lastPriceCheck || position.openedAt;
+    const holdTimeMin = (Date.now() - new Date(position.openedAt).getTime()) / 60000;
     const staleDurationMs = Date.now() - new Date(lastPriceCheck).getTime();
     const staleThresholdMs = config.exit.stalePriceMinutes * 60 * 1000;
+
+    // Determine per-mode max hold time (trade modes have shorter timeouts)
+    let maxHoldMinutes = config.exit.maxHoldTimeMinutes;
+    const tradeMode = position.tradeMode;
+    if (tradeMode && config.screening.tradeModes?.[tradeMode]?.maxHoldSeconds) {
+      maxHoldMinutes = config.screening.tradeModes[tradeMode].maxHoldSeconds / 60;
+    }
+
+    // Force-close pre-migration tokens that exceeded max hold time
+    if (!hadPriceBefore && holdTimeMin >= maxHoldMinutes) {
+      console.log(chalk.yellow(`[monitor] ⏰ ${position.symbol} pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${config.exit.maxHoldTimeMinutes}min) — simulated flat exit`));
+      await executeSell(mint, position, 100, `⏰ TIME EXIT: pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${config.exit.maxHoldTimeMinutes}min) — no migration detected`, { type: 'time_exit' });
+      return;
+    }
 
     if (hadPriceBefore && staleDurationMs > staleThresholdMs) {
       // Token previously had price but now lost it — likely rug/delist
@@ -89,8 +142,7 @@ async function evaluatePosition(mint, position) {
       await executeSell(mint, position, 100, '⚠️ STALE PRICE: previously priced token lost price data');
     } else if (!hadPriceBefore) {
       // Token never had a Jupiter price — it's pre-migration, this is NORMAL
-      // Skip — don't sell just because Jupiter can't quote a Pump.fun bonding curve token
-      console.log(chalk.gray(`[monitor] ℹ️ ${position.symbol} no Jupiter price (pre-migration) — skipping`));
+      console.log(chalk.gray(`[monitor] ℹ️ ${position.symbol} no Jupiter price (pre-migration) — ${holdTimeMin.toFixed(0)}/${config.exit.maxHoldTimeMinutes}min before auto-close`));
     }
     return;
   }
@@ -102,10 +154,17 @@ async function evaluatePosition(mint, position) {
     : 1;
   const pnlPct = ((currentPriceSol - position.entryPriceSol) / position.entryPriceSol) * 100;
 
+  // Estimate current MCap from price ratio * entry MCap
+  const currentMcapEst = position.entryMcapSol > 0 && position.entryPriceSol > 0
+    ? position.entryMcapSol * (currentPriceSol / position.entryPriceSol)
+    : 0;
+  const peakMcapSol = Math.max(position.peakMcapSol || 0, currentMcapEst);
+
   updatePosition(mint, {
     currentPriceSol,
     peakPriceSol: peakPrice,
     peakMultiple: Math.max(position.peakMultiple || 1, currentMultiple),
+    peakMcapSol,
     currentMultiple,
     pnlPct,
     lastPriceCheck: new Date().toISOString(),
@@ -159,7 +218,8 @@ async function executeSell(mint, position, sellPct, reason, exitMeta = {}) {
   ));
 
   // Execute sell
-  const result = await sellToken({ mint, sellPct, slippageBps: slippage });
+  const tradeValueSol = position.entryAmountSol ? (position.entryAmountSol * (sellPct / 100)) : 0;
+  const result = await sellToken({ mint, sellPct, slippageBps: slippage, tradeValueSol, entryPriceSol: position.entryPriceSol });
 
   if (result.success) {
     const soldPct = (position.soldPct || 0) + sellPct;
@@ -191,16 +251,41 @@ async function executeSell(mint, position, sellPct, reason, exitMeta = {}) {
 
       if (pnlSol < 0) recordLoss();
 
-      // Telegram notification
+      // Telegram notification — Carter-style
       const emoji = pnlSol >= 0 ? '✅' : '🔴';
+      const exitType = exitMeta.type || 'manual';
+      const exitLabel = exitType.replace('_', ' ').toUpperCase();
+      const dryRunLabel = config.isDryRun ? '· Mode: dry_run' : '';
+      const strategyLabel = position.tradeMode ? `· Strategy: ${position.tradeMode}` : '';
+      const entryMcap = position.entryMcapSol > 0
+        ? formatMcapUsd(position.entryMcapSol)
+        : 'N/A';
+      const peakMcap = position.peakMcapSol > position.entryMcapSol
+        ? formatMcapUsd(position.peakMcapSol)
+        : entryMcap;
+      const pnlPct = position.pnlPct || ((pnlSol / (position.entryAmountSol || 1)) * 100);
+      // Exit MCap estimate from PnL ratio
+      const pnlRatio = position.entryAmountSol > 0
+        ? 1 + (pnlSol / position.entryAmountSol)
+        : 1;
+      const exitMcap = position.entryMcapSol > 0
+        ? formatMcapUsd(position.entryMcapSol * pnlRatio)
+        : 'N/A';
+      const tpLabel = 'TP: 3.0x/5.0x/10.0x';
+      const slLabel = `SL: ${config.exit.stopLossPct}%`;
+      const trailLabel = `Trail: ${config.exit.trailingStopPct}%`;
+      const holdTime = getHoldTime(position.openedAt);
+
       await sendTelegram(
-        `${emoji} *Position Closed*\n` +
-        `Token: *${position.symbol}*\n` +
-        `PnL: *${pnlSol >= 0 ? '+' : ''}${pnlSol.toFixed(4)} SOL*\n` +
-        `Multiple: *${(position.currentMultiple || 1).toFixed(2)}x*\n` +
-        `Reason: ${reason}\n` +
-        `Hold time: ${getHoldTime(position.openedAt)}\n` +
-        `Tx: \`${result.txHash || 'N/A'}\``
+        `${emoji} *Dry-run exit: ${exitLabel}*\n\n` +
+        `📍 *${position.symbol}*\n` +
+        `Token: \`${mint.slice(0, 8)}…\`\n` +
+        `Status: closed ${dryRunLabel}${strategyLabel}\n` +
+        `Entry: ${entryMcap} → Exit: ${exitMcap} · High: ${peakMcap}\n` +
+        `Size: *${(position.entryAmountSol || 0).toFixed(4)} SOL* · PnL: *${pnlPct.toFixed(1)}%*\n` +
+        `${tpLabel} · ${slLabel} · ${trailLabel}\n` +
+        `Exit: ${exitLabel} at ${holdTime} (${pnlPct.toFixed(1)}%)\n` +
+        `_${reason}_`
       );
     } else {
       // Partial sell — update position
@@ -230,8 +315,11 @@ async function executeSell(mint, position, sellPct, reason, exitMeta = {}) {
 // ─── Helper ───────────────────────────────────────────────────────────────────
 function getHoldTime(openedAt) {
   const ms = Date.now() - new Date(openedAt).getTime();
-  const minutes = Math.floor(ms / 60000);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  return `${hours}h ${minutes % 60}m`;
+  const mins = Math.floor(ms / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
+  if (mins >= 1) {
+    const hours = Math.floor(mins / 60);
+    return hours >= 1 ? `${hours}h ${mins % 60}m` : `${mins}m ${secs}s`;
+  }
+  return `${secs}s`;
 }
