@@ -253,8 +253,10 @@ async function executeSell(mint, position, sellPct, reason, exitMeta = {}) {
       const emoji = pnlSol >= 0 ? '✅' : '🔴';
       const exitType = exitMeta.type || 'manual';
       const exitLabel = exitType.replace('_', ' ').toUpperCase();
-      const dryRunLabel = config.isDryRun ? '· Mode: dry_run' : '';
-      const strategyLabel = position.tradeMode ? `· Strategy: ${position.tradeMode}` : '';
+      const metaParts = ['closed'];
+      if (config.isDryRun) metaParts.push('Mode: dry\\_run');
+      if (position.tradeMode) metaParts.push(`Strategy: ${position.tradeMode.replace(/_/g, '\\_')}`);
+      const statusLine = `Status: ${metaParts.join(' · ')}`;
       const entryMcap = position.entryMcapSol > 0
         ? formatMcapUsd(position.entryMcapSol)
         : 'N/A';
@@ -282,7 +284,7 @@ async function executeSell(mint, position, sellPct, reason, exitMeta = {}) {
         `${emoji} *Dry-run exit: ${exitLabel}*\n\n` +
         `📍 *${position.symbol}*  #${posNumber}\n` +
         `Token: \`${mint.slice(0, 8)}…pump\`\n` +
-        `Status: closed ${dryRunLabel}${strategyLabel}\n` +
+        `${statusLine}\n` +
         `Entry mcap: ${entryMcap} · High: ${peakMcap}\n` +
         `Size: ${(position.entryAmountSol || 0).toFixed(4)} SOL · PnL: *${pnlPct.toFixed(1)}%*\n` +
         `${tpLabel} · ${slLabel} · ${trailLabel}\n` +

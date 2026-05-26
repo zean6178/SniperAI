@@ -943,6 +943,10 @@ export async function getTokenPrice(mint) {
     const dexPrice = await getDexScreenerPrice(mint);
     if (dexPrice !== null) return dexPrice;
 
+    // ⭐ Last resort: Pump.fun bonding curve AMM PDA (on-chain, real price)
+    const pumpPrice = await getPumpFunPrice(mint, decimals);
+    if (pumpPrice !== null) return pumpPrice;
+
     return null;
   } catch {
     // Last resort: DexScreener
