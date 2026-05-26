@@ -92,6 +92,36 @@ export const colors = {
 
   white: '#FFFFFF',
   black: '#000000',
+
+  // ═══ Legacy aliases (backward compat for existing screens) ═══
+  bg: {
+    primary: '#0A1120',
+    secondary: '#111827',
+    tertiary: '#1A2235',
+    hover: 'rgba(255, 255, 255, 0.05)',
+    glass: 'rgba(255, 255, 255, 0.03)',
+  },
+  cyan: {
+    400: '#00E5FF',
+    50: '#E0FBFF',
+    gradient: ['#0066FF', '#00E5FF'] as const,
+    glow: 'rgba(0, 229, 255, 0.3)',
+  },
+  blue: {
+    400: '#0066FF',
+  },
+  text: {
+    primary: '#FFFFFF',
+    secondary: 'rgba(255, 255, 255, 0.6)',
+    tertiary: 'rgba(255, 255, 255, 0.35)',
+    disabled: 'rgba(255, 255, 255, 0.2)',
+    cyan: '#00E5FF',
+  },
+  border: {
+    subtle: 'rgba(0, 229, 255, 0.06)',
+    default: 'rgba(0, 229, 255, 0.1)',
+    strong: 'rgba(0, 229, 255, 0.2)',
+  },
 };
 
 
@@ -333,47 +363,5 @@ export const stackTheme = {
 // Will be removed once all screens are fully migrated.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// Re-export colors with legacy aliases so existing imports don't break
-export const legacyColors = {
-  bg: {
-    primary: colors.dark.bg,
-    secondary: colors.dark.surface,
-    tertiary: colors.dark.elevated,
-    hover: colors.dark.glassHover,
-    glass: colors.dark.glass,
-  },
-  cyan: {
-    400: colors.primary.cyan,
-    50: '#E0FBFF',
-    gradient: colors.primary.gradient,
-    glow: 'rgba(0, 229, 255, 0.3)',
-  },
-  blue: {
-    400: colors.primary.blue,
-  },
-  text: {
-    primary: colors.textDark.primary,
-    secondary: colors.textDark.secondary,
-    tertiary: colors.textDark.tertiary,
-    disabled: colors.textDark.disabled,
-    cyan: colors.primary.cyan,
-  },
-  border: {
-    subtle: colors.borderDark.subtle,
-    default: colors.borderDark.default,
-    strong: colors.borderDark.strong,
-  },
-  success: colors.success,
-  danger: colors.danger,
-  warning: colors.warning,
-  trade: colors.trade,
-};
-
-// Merge legacy into main colors export for backward compat
-Object.assign(colors, {
-  bg: legacyColors.bg,
-  cyan: legacyColors.cyan,
-  blue: legacyColors.blue,
-  text: legacyColors.text,
-  border: legacyColors.border,
-});
+// Legacy aliases are now included directly in the colors object above.
+// No Object.assign needed.
