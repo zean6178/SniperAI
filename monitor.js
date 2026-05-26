@@ -127,8 +127,29 @@ async function evaluatePosition(mint, position) {
       maxHoldMinutes = config.screening.tradeModes[tradeMode].maxHoldSeconds / 60;
     }
 
+    // ⭐ FIX: Try to update peakMcapSol from PumpPortal WS cached data even without Jupiter price
+    try {
+      const { getCachedMcap } = await import('./detector.js');
+      const liveMcap = getCachedMcap(mint);
+      if (liveMcap > 0) {
+        const currentPeakMcap = Math.max(position.peakMcapSol || 0, liveMcap);
+        updatePosition(mint, { peakMcapSol: currentPeakMcap, lastPriceCheck: new Date().toISOString() });
+      }
+    } catch {}
+
     // Force-close pre-migration tokens that exceeded max hold time
     if (!hadPriceBefore && holdTimeMin >= maxHoldMinutes) {
+      // ⭐ FIX: Calculate real PnL for pre-migration dry-run using cached mcap
+      let preMigPnlPct = 0;
+      try {
+        const { getCachedMcap } = await import('./detector.js');
+        const currentMcap = getCachedMcap(mint);
+        if (currentMcap > 0 && position.entryMcapSol > 0) {
+          preMigPnlPct = ((currentMcap - position.entryMcapSol) / position.entryMcapSol) * 100;
+          updatePosition(mint, { pnlPct: preMigPnlPct });
+        }
+      } catch {}
+
       console.log(chalk.yellow(`[monitor] ⏰ ${position.symbol} pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${config.exit.maxHoldTimeMinutes}min) — simulated flat exit`));
       await executeSell(mint, position, 100, `⏰ TIME EXIT: pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${config.exit.maxHoldTimeMinutes}min) — no migration detected`, { type: 'time_exit' });
       return;
@@ -260,16 +281,20 @@ async function executeSell(mint, position, sellPct, reason, exitMeta = {}) {
       const entryMcap = position.entryMcapSol > 0
         ? formatMcapUsd(position.entryMcapSol)
         : 'N/A';
-      const peakMcap = position.peakMcapSol > position.entryMcapSol
+      // ⭐ FIX: Use actual peakMcapSol tracked during hold period (not just entryMcap as fallback)
+      const peakMcap = (position.peakMcapSol || 0) > (position.entryMcapSol || 0)
         ? formatMcapUsd(position.peakMcapSol)
         : entryMcap;
       const pnlPct = position.pnlPct || ((pnlSol / (position.entryAmountSol || 1)) * 100);
-      // Exit MCap estimate from PnL ratio
+      // ⭐ FIX: Exit MCap — use peakMcapSol if pnl is 0 (pre-migration flat exit)
       const pnlRatio = position.entryAmountSol > 0
         ? 1 + (pnlSol / position.entryAmountSol)
         : 1;
-      const exitMcap = position.entryMcapSol > 0
-        ? formatMcapUsd(position.entryMcapSol * pnlRatio)
+      const exitMcapValue = pnlRatio !== 1 && position.entryMcapSol > 0
+        ? position.entryMcapSol * pnlRatio
+        : (position.peakMcapSol || position.entryMcapSol || 0);
+      const exitMcap = exitMcapValue > 0
+        ? formatMcapUsd(exitMcapValue)
         : 'N/A';
       // TP as percentage (convert first TP multiple to %)
       const firstTpPct = config.exit.takeProfitLevels?.[0]?.triggerMultiple
