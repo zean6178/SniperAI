@@ -240,32 +240,7 @@ export function checkExitConditions(position, currentPriceSol) {
   const currentMultiple = currentPriceSol / entryPrice;
   const soldPct = position.soldPct || 0;
 
-  // ── Determine phase ────────────────────────────────────────────────────────
-  // Phase 1 (Discovery): no TP hit yet → only hard SL, trailing OFF
-  // Phase 2 (Protection): 5x hit → trailing ON 20%
-  // Phase 3 (Runner): 7x hit → trailing tighten 12%
-  // Phase 4 (Moonbag): 10x+ hit → trailing tighten 12%, 15x full close
-  const tpLevelsHit = new Set(
-    (position.sellHistory || [])
-      .filter(s => s.type === 'take_profit')
-      .map(s => s.triggerMultiple)
-  );
-  const highestTp = Math.max(...tpLevelsHit, 0);
-  const phase = highestTp >= 10 ? 4
-              : highestTp >= 7  ? 3
-              : highestTp >= 5  ? 2
-              : 1;
-
-  // ── Peak price & trailing ──────────────────────────────────────────────────
-  const peakPrice = Math.max(position.peakPriceSol || entryPrice, currentPriceSol);
-  const dropFromPeak = peakPrice > 0 ? ((peakPrice - currentPriceSol) / peakPrice) * 100 : 0;
-
-  const trailingPct = phase === 4 ? 12
-                    : phase === 3 ? 12
-                    : phase === 2 ? 20
-                    : 999;                // OFF di phase 1
-
-  // ── 1. Stop Loss (selalu aktif) ──────────────────────────────────────────
+  // ── Stop Loss (selalu aktif) ──────────────────────────────────────────
   if (priceChange <= exit.stopLossPct) {
     return {
       shouldExit: true,
@@ -275,17 +250,7 @@ export function checkExitConditions(position, currentPriceSol) {
     };
   }
 
-  // ── 2. Trailing Stop (ONLY di phase 2+) ──────────────────────────────────
-  if (phase >= 2 && dropFromPeak >= trailingPct) {
-    return {
-      shouldExit: true,
-      reason: `📉 TRAILING STOP: dropped ${dropFromPeak.toFixed(1)}% from peak (threshold: ${trailingPct}%)`,
-      sellPct: 100,
-      type: 'trailing_stop',
-    };
-  }
-
-  // ── 3. Take Profit Levels ────────────────────────────────────────────────
+  // ── Take Profit Levels ────────────────────────────────────────────────
   const sortedLevels = [...exit.takeProfitLevels].sort((a, b) => b.triggerMultiple - a.triggerMultiple);
   for (const level of sortedLevels) {
     if (currentMultiple >= level.triggerMultiple) {

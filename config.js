@@ -160,13 +160,12 @@ function buildConfig() {
     // EXIT STRATEGY
     // ═══════════════════════════════════════════════════════════════════════════
     exit: {
-      takeProfitLevels: [
-        { triggerMultiple: 2.0, sellPct: 50 },   // 2x → jual 50%
-        { triggerMultiple: 3.0, sellPct: 75 },   // 3x → jual 75% dari sisa
-        { triggerMultiple: 5.0, sellPct: 100 },  // 5x → full exit
+takeProfitLevels: [
+        { triggerMultiple: 1.4, sellPct: 80 },   // +40% → jual 80%
+        { triggerMultiple: 1.6, sellPct: 90 },   // +60% → jual 90% sisa (sisakan 2% moonbag)
       ],
-      stopLossPct:          -20,
-      trailingStopPct:      15,
+      stopLossPct:          -10,
+      trailingStopPct:      0,       // OFF — trailing di-handle manual via TP levels
       maxHoldTimeMinutes:   10,      // Naikin: 5m → 10m biar token lebih waktu migrasi
       stalePriceMinutes:    2,       // Turun: 10m → 2 menit — force exit kalo no movement
       autoExitOnRug:        true,
