@@ -67,7 +67,7 @@ async function main() {
   console.log(chalk.yellow(`Dry Run   : ${config.isDryRun}`));
   console.log(chalk.yellow(`Buy Amount: ${config.entry.buyAmountSol} SOL`));
   console.log(chalk.yellow(`Max Pos   : ${config.risk.maxOpenPositions}`));
-  console.log(chalk.yellow(`Stop Loss : ${config.exit.stopLossPct}%`));
+  console.log(chalk.yellow(`Stop Loss : ${Math.abs(config.exit.stopLossPct)}%`));
   console.log(chalk.yellow(`Trailing  : ${config.exit.trailingStopPct}%`));
   console.log('');
 
@@ -267,7 +267,7 @@ onCommand('help', async (chatId) => {
       `• Slippage: *${(cfg.entry.slippageBps / 100).toFixed(1)}%*\n` +
       `• Max Positions: *${cfg.risk.maxOpenPositions}*\n` +
       `• Max Daily Trades: *${cfg.risk.maxDailyTrades}*\n` +
-      `• Stop Loss: *${cfg.exit.stopLossPct}%*\n` +
+      `• Stop Loss: *${Math.abs(cfg.exit.stopLossPct)}%*\n` +
       `• Trailing Stop: *${cfg.exit.trailingStopPct}%*`
     );
 
@@ -284,7 +284,7 @@ onCommand('help', async (chatId) => {
       `🔄 *Config Reloaded*\n\n` +
       `📋 *Current settings:*\n` +
       `• TP: *${firstTpPct}%* (${cfg.exit.takeProfitLevels.map(l => l.triggerMultiple + 'x').join(' / ')})\n` +
-      `• SL: *${cfg.exit.stopLossPct}%*\n` +
+      `• SL: *${Math.abs(cfg.exit.stopLossPct)}%*\n` +
       `• Trail: *${cfg.exit.trailingStopPct}%*\n` +
       `• Buy: *${cfg.entry.buyAmountSol} SOL*\n` +
       `• Max Hold: *${cfg.exit.maxHoldTimeMinutes}min*\n` +

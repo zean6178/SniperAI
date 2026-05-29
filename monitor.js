@@ -161,8 +161,8 @@ async function evaluatePosition(mint, position) {
         }
       } catch {}
 
-      console.log(chalk.yellow(`[monitor] ⏰ ${position.symbol} pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${config.exit.maxHoldTimeMinutes}min) — simulated flat exit`));
-      await executeSell(mint, position, 100, `⏰ TIME EXIT: pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${config.exit.maxHoldTimeMinutes}min) — no migration detected`, { type: 'time_exit' });
+      console.log(chalk.yellow(`[monitor] ⏰ ${position.symbol} pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${maxHoldMinutes.toFixed(0)}min) — simulated flat exit`));
+      await executeSell(mint, position, 100, `⏰ TIME EXIT: pre-migration for ${holdTimeMin.toFixed(0)}min (max: ${maxHoldMinutes.toFixed(0)}min) — no migration detected`, { type: 'time_exit' });
       return;
     }
 
@@ -338,7 +338,7 @@ async function executeSell(mint, position, sellPct, reason, exitMeta = {}) {
         ? ((config.exit.takeProfitLevels[0].triggerMultiple - 1) * 100).toFixed(0)
         : 'N/A';
       const tpLabel = `TP: ${firstTpPct}%`;
-      const slLabel = `SL: ${config.exit.stopLossPct}%`;
+      const slLabel = `SL: ${Math.abs(config.exit.stopLossPct)}%`;
       const trailLabel = `Trail: ${config.exit.trailingStopPct}%`;
       const posNumber = getClosedCount() + 1;
 
