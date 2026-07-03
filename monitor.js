@@ -16,6 +16,7 @@ import { sellToken, getTokenPrice, getTokenBalance } from './executor.js';
 import { checkExitConditions, detectRug, recordLoss } from './risk.js';
 import { sendTelegram } from './telegram.js';
 import { formatMcapUsd } from './telegram-ui.js';
+import { buildExitNotificationText } from './telegram-ui.js';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // MONITOR LOOP
@@ -315,68 +316,31 @@ async function executeSell(mint, position, sellPct, reason, exitMeta = {}) {
 
       if (pnlSol < 0) recordLoss();
 
-      // Telegram notification — Carter-style
-      const emoji = pnlSol >= 0 ? '✅' : '🔴';
-      const exitType = exitMeta.type || 'manual';
-      const exitLabel = exitType.replace('_', ' ').toUpperCase();
-      const metaParts = ['closed'];
-      if (config.isDryRun) metaParts.push('Mode: dry\\_run');
-      if (position.tradeMode) metaParts.push(`Strategy: ${position.tradeMode.replace(/_/g, '\\_')}`);
-      const statusLine = `Status: ${metaParts.join(' · ')}`;
-
-      const entryMcap = position.entryMcapSol > 0
-        ? formatMcapUsd(position.entryMcapSol)
-        : 'N/A';
-
-      // ✅ FIX BUG 1: Tampilkan peakMcapSol selama > 0, bukan hanya saat > entryMcapSol
-      // Bug lama: kondisi (peakMcapSol > entryMcapSol) selalu false karena savePosition()
-      // menginit peakMcapSol = entryMcapSol, sehingga High selalu tampil sama dengan Entry
-      const peakMcap = position.peakMcapSol > 0
-        ? formatMcapUsd(position.peakMcapSol)
-        : entryMcap;
-
-      // ✅ FIX BUG 2: Hitung pnlPct dari pnlSol aktual (realized), bukan dari position.pnlPct
-      // Bug lama: position.pnlPct adalah unrealized % dari last price check — bisa stale
-      // dan tidak mencerminkan actual exit PnL setelah slippage/fee
+      // Telegram notification — rich exit card
       const pnlPct = entryAmountSol > 0
         ? (pnlSol / entryAmountSol) * 100
         : (position.pnlPct || 0);
-
-      // ✅ FIX BUG 3: Gunakan currentMultiple (price-based) untuk estimasi exit mcap
-      // Bug lama: pnlRatio = 1 + (pnlSol / entryAmountSol) — ini SOL-based dan sudah
-      // dipotong slippage/fee sehingga exit mcap ikut meleset. Harusnya pakai price ratio.
-      const exitMultiple = position.currentMultiple > 0
-        ? position.currentMultiple
-        : (position.entryPriceSol > 0 && position.currentPriceSol > 0
-            ? position.currentPriceSol / position.entryPriceSol
-            : 1);
-      const exitMcapValue = exitMultiple !== 1 && position.entryMcapSol > 0
-        ? position.entryMcapSol * exitMultiple
-        : (position.peakMcapSol || position.entryMcapSol || 0);
-      const exitMcap = exitMcapValue > 0
-        ? formatMcapUsd(exitMcapValue)
-        : 'N/A';
-
-      // TP as percentage (convert first TP multiple to %)
-      const firstTpPct = config.exit.takeProfitLevels?.[0]?.triggerMultiple
-        ? ((config.exit.takeProfitLevels[0].triggerMultiple - 1) * 100).toFixed(0)
-        : 'N/A';
-      const tpLabel = `TP: ${firstTpPct}%`;
-      const slLabel = `SL: ${config.exit.stopLossPct}%`;
-      const trailLabel = `Trail: ${config.exit.trailingStopPct}%`;
       const posNumber = getClosedCount() + 1;
 
-      await sendTelegram(
-        `${emoji} *Dry-run exit: ${exitLabel}*\n\n` +
-        `📍 *${position.symbol}*  #${posNumber}\n` +
-        `Token: \`${mint.slice(0, 8)}…pump\`\n` +
-        `${statusLine}\n` +
-        `Entry mcap: ${entryMcap} · High: ${peakMcap}\n` +
-        `Size: ${(position.entryAmountSol || 0).toFixed(4)} SOL · PnL: *${pnlPct.toFixed(1)}%*\n` +
-        `${tpLabel} · ${slLabel} · ${trailLabel}\n` +
-        `Exit: ${exitLabel} at ${exitMcap} (${pnlPct.toFixed(1)}%)\n` +
-        `_${reason}_`
+      const exitMc = position.entryMcapSol > 0 && position.currentMultiple > 0
+        ? position.entryMcapSol * position.currentMultiple
+        : (position.peakMcapSol || position.entryMcapSol || 0);
+
+      const exitNotifText = buildExitNotificationText(
+        {
+          ...position,
+          pnlSol,
+          pnlPct,
+          exitMcap: exitMc > 0 ? formatMcapUsd(exitMc) : 'N/A',
+          tokenMint: mint,
+        },
+        reason,
+        exitMeta,
+        posNumber,
+        config
       );
+
+      await sendTelegram(exitNotifText);
     } else {
       // Partial sell — update position
       updatePosition(mint, {

@@ -35,7 +35,7 @@ function _getRpcUrls() {
     process.env.BACKUP_RPC_URL,
   ].filter(Boolean);
 }
-let _rpcIndex = 0;
+let _rpcIndex = -1;  // -1 so first rotateRpc() call lands on index 0 (primary)
 let _rpcUrls = null;
 
 export function rotateRpc() {
@@ -55,6 +55,35 @@ export function getConnection() {
     rotateRpc();
   }
   return _connection;
+}
+
+// ─── Smart RPC — auto-retry with rotation on 429 ─────────────────────────
+// Wraps any RPC call: on 429 (max usage reached), rotates to next RPC and retries.
+// Tries all configured RPCs before giving up.
+export async function smartRpc(fn, label = 'rpc') {
+  if (!_rpcUrls) _rpcUrls = _getRpcUrls();
+  const totalEndpoints = _rpcUrls.length;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < totalEndpoints; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastError = e;
+      const is429 = e?.message?.includes('429') ||
+                    e?.message?.includes('max usage reached') ||
+                    e?.code === -32429;
+
+      if (is429 && attempt < totalEndpoints - 1) {
+        console.warn(chalk.yellow(`[smartRpc] ⚠️ 429 on ${label} — rotating to next RPC (attempt ${attempt + 1}/${totalEndpoints})`));
+        rotateRpc();
+        await new Promise(r => setTimeout(r, 500)); // Brief pause before retry
+      } else {
+        throw e; // Non-429 error or last attempt
+      }
+    }
+  }
+  throw lastError;
 }
 
 export function getWallet() {
@@ -98,11 +127,21 @@ export async function buyToken({ mint, amountSol, slippageBps }) {
     // ⭐ Capture real Pump.fun price & MCap for simulated PnL
     const realPrice = await getTokenPrice(mint).catch(() => null);
     let realMcap = 0;
-    if (realPrice) {
+    try {
+      const decimals = await getMintDecimals(mint);
+      realMcap = await getPumpFunMcap(mint, decimals);
+    } catch {}
+    // If MCap still 0, estimate from bonding curve SOL
+    if (!realMcap || realMcap <= 0) {
       try {
-        const decimals = await getMintDecimals(mint);
-        realMcap = await getPumpFunMcap(mint, decimals);
+        const { getCachedMcap } = await import('./detector.js');
+        const cached = getCachedMcap(mint);
+        if (cached > 0) realMcap = cached;
       } catch {}
+    }
+    if (!realMcap || realMcap <= 0) {
+      // Estimate: amountSol * 500 (rough Pump.fun MCap estimate)
+      realMcap = amountSol * 500;
     }
     return {
       success: true,
@@ -557,7 +596,7 @@ async function pollBundleConfirmation(bundleId, jitoConfig, timeoutMs = 30000) {
  * @param {number} params.slippageBps - Slippage tolerance
  * @returns {Promise<{success: boolean, txHash?: string, solReceived?: number, error?: string}>}
  */
-export async function sellToken({ mint, sellPct, slippageBps, tradeValueSol, entryPriceSol, useBondingCurve = false }) {
+export async function sellToken({ mint, sellPct, slippageBps, tradeValueSol, entryPriceSol, useBondingCurve = false, position = null }) {
   const config = getConfig();
   const isDry = config.isDryRun;
 
@@ -575,16 +614,35 @@ export async function sellToken({ mint, sellPct, slippageBps, tradeValueSol, ent
       } catch {}
     }
 
+    // ⭐ FIX: Force bonding curve price for pre-migration tokens (last resort before break-even)
+    if (!currentPrice || currentPrice <= 0) {
+      try {
+        const bcPrice = await getTokenPrice(mint, true).catch(() => null);
+        if (bcPrice && bcPrice > 0) {
+          currentPrice = bcPrice;
+          console.log(chalk.cyan(`[executor] 🔗 Force bonding curve price: ${bcPrice.toFixed(8)} SOL`));
+        }
+      } catch {}
+    }
+
+    console.log(chalk.gray(`[executor] 📊 Sell price: ${currentPrice || 'null'} | Entry price: ${entryPriceSol || 'null'} | TradeValue: ${tradeValueSol}`));
+
     let solReceived = 0;
 
     if (currentPrice && currentPrice > 0 && entryPriceSol > 0) {
       // Simulasi dengan real price movement
       solReceived = tradeValueSol * (currentPrice / entryPriceSol);
+    } else if (position && position.pnlPct !== undefined && position.pnlPct !== 0 && entryPriceSol > 0) {
+      // ⭐ FIX: Use pre-calculated pnlPct from monitor (e.g. from cached mcap or bonding curve)
+      // when direct price fetch fails (pre-migration tokens)
+      solReceived = tradeValueSol * (1 + position.pnlPct / 100);
+      console.log(chalk.cyan(`[executor] 📐 Using position.pnlPct=${position.pnlPct.toFixed(1)}% → solReceived=${solReceived.toFixed(6)} SOL`));
     } else {
       // Fallback: break-even (tradeValueSol = entry amount)
       solReceived = tradeValueSol || 0;
     }
 
+    console.log(chalk.gray(`[executor] 💰 solReceived: ${solReceived.toFixed(6)} SOL`));
     return { success: true, dryRun: true, txHash: 'DRY_RUN_SELL', solReceived };
   }
 
@@ -633,6 +691,61 @@ export async function sellToken({ mint, sellPct, slippageBps, tradeValueSol, ent
   } catch (e) {
     console.error(chalk.red(`[executor] Sell error: ${e.message}`));
     return { success: false, error: e.message };
+  }
+}
+
+/**
+ * Sweep remaining dust tokens back to SOL after a position is fully closed.
+ * Tries to sell any remaining token balance via PumpPortal → Jupiter.
+ * Skips if dust value is below minimum threshold.
+ *
+ * @param {string} mint - Token mint address
+ * @param {string} symbol - Token symbol (for logging)
+ */
+export async function sweepDust(mint, symbol = '') {
+  const config = getConfig();
+  if (!config.exit.autoSweep) return;
+  if (config.isDryRun) {
+    console.log(chalk.gray(`[executor] 🧹 DRY RUN — sweep skipped for ${symbol || mint.slice(0, 8)}`));
+    return;
+  }
+
+  try {
+    const tokenBalance = await getTokenBalance(mint);
+    if (!tokenBalance || tokenBalance <= 0) {
+      console.log(chalk.gray(`[executor] 🧹 Sweep: ${symbol} — no dust balance`));
+      return;
+    }
+
+    // Estimate dust value in SOL
+    const price = await getTokenPrice(mint).catch(() => null);
+    const dustValueSol = price ? (tokenBalance * price) : 0;
+    const SOL_PRICE_USD = 150; // rough estimate
+    const dustValueUsd = dustValueSol * SOL_PRICE_USD;
+
+    if (dustValueUsd < (config.exit.minSweepValueUsd || 0.50)) {
+      console.log(chalk.gray(`[executor] 🧹 Sweep: ${symbol} dust $${dustValueUsd.toFixed(2)} < min $${config.exit.minSweepValueUsd} — skip`));
+      return;
+    }
+
+    console.log(chalk.cyan(`[executor] 🧹 Sweeping ${symbol} dust: ${tokenBalance.toFixed(0)} tokens (~$${dustValueUsd.toFixed(2)})`));
+
+    // Try PumpPortal first
+    const result = await sellViaPumpPortal(mint, tokenBalance, config.entry.slippageBps);
+    if (result.success) {
+      console.log(chalk.green(`[executor] 🧹 ✅ Sweep success: ${result.solReceived?.toFixed(6)} SOL | tx: ${result.txHash}`));
+      return;
+    }
+
+    // Fallback to Jupiter
+    const jupResult = await sellViaJupiter(mint, tokenBalance, config.entry.slippageBps);
+    if (jupResult.success) {
+      console.log(chalk.green(`[executor] 🧹 ✅ Sweep via Jupiter: ${jupResult.solReceived?.toFixed(6)} SOL | tx: ${jupResult.txHash}`));
+    } else {
+      console.warn(chalk.yellow(`[executor] 🧹 ⚠️ Sweep failed for ${symbol}: ${jupResult.error}`));
+    }
+  } catch (e) {
+    console.warn(chalk.yellow(`[executor] 🧹 Sweep error for ${symbol}: ${e.message}`));
   }
 }
 
@@ -900,7 +1013,7 @@ export async function getTokenBalance(mint) {
  */
 let _mintInfoCache = new Map();
 
-async function getMintDecimals(mint) {
+export async function getMintDecimals(mint) {
   const cached = _mintInfoCache.get(mint);
   if (cached && Date.now() - cached.ts < 3600000) return cached.decimals;
   try {
@@ -952,6 +1065,16 @@ export async function getTokenPrice(mint, useBondingCurve = false) {
     // ⭐ Fallback: DexScreener API (works for pre-migration Pump.fun tokens)
     const dexPrice = await getDexScreenerPrice(mint);
     if (dexPrice !== null) return dexPrice;
+
+    // ⭐ Fallback: Pump.fun v3 API (best for new pre-migration tokens)
+    try {
+      const pfRes = await axios.get(`https://frontend-api-v3.pump.fun/coins/${mint}`, { timeout: 3000 });
+      const pfData = pfRes.data;
+      if (pfData?.market_cap && pfData?.total_supply) {
+        const price = parseFloat(pfData.market_cap) / (pfData.total_supply / Math.pow(10, pfData.base_decimals || 6));
+        if (price > 0) return price;
+      }
+    } catch {}
 
         // ⭐ Bonding curve AMM PDA — HYBRID: only if position has detected activity
     if (useBondingCurve) {
@@ -1043,14 +1166,40 @@ async function getPumpFunPrice(mint, decimals) {
 /**
  * Estimate token MCap in SOL from DexScreener API
  */
-async function getPumpFunMcap(mint, decimals) {
+export async function getPumpFunMcap(mint, decimals) {
   try {
     // ⭐ First try cached MCap from PumpPortal WS
     const { getCachedMcap } = await import('./detector.js');
     const cachedMcap = getCachedMcap(mint);
-    if (cachedMcap > 0) return cachedMcap;
+    if (cachedMcap > 0) {
+      console.log(chalk.gray(`[mcap] ✅ Cached: ${cachedMcap.toFixed(1)} SOL`));
+      return cachedMcap;
+    }
 
-    // Try DexScreener (works for Pump.fun pre-migration tokens)
+    // ⭐ Try Pump.fun API directly (best for new tokens)
+    try {
+      const pfRes = await axios.get(`https://frontend-api-v3.pump.fun/coins/${mint}`, { timeout: 3000 });
+      const pfData = pfRes.data;
+      if (pfData?.usd_market_cap) {
+        const mcapSol = parseFloat(pfData.usd_market_cap) / 150;
+        if (mcapSol > 0) {
+          console.log(chalk.gray(`[mcap] ✅ Pump.fun API: ${mcapSol.toFixed(1)} SOL ($${parseFloat(pfData.usd_market_cap).toFixed(0)})`));
+          return mcapSol;
+        }
+      }
+      // Fallback: market_cap field (in SOL)
+      if (pfData?.market_cap) {
+        const mcapSol = parseFloat(pfData.market_cap);
+        if (mcapSol > 0) {
+          console.log(chalk.gray(`[mcap] ✅ Pump.fun MCap: ${mcapSol.toFixed(1)} SOL`));
+          return mcapSol;
+        }
+      }
+    } catch (e) {
+      console.log(chalk.gray(`[mcap] Pump.fun API: ${e.message}`));
+    }
+
+    // Try DexScreener (works for migrated tokens)
     const res = await axios.get(`https://api.dexscreener.com/latest/dex/token/${mint}`, {
       timeout: 5000,
     });

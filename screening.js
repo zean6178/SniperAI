@@ -15,7 +15,7 @@ import chalk from 'chalk';
 import { getConfig } from './config.js';
 import { getTradeStats } from './detector.js';
 import { isDeployerBlacklisted, addDeployerToBlacklist } from './state.js';
-import { getConnection, rotateRpc } from './executor.js';
+import { getConnection, rotateRpc, smartRpc } from './executor.js';
 import { checkMayhemState } from './mayhem-check.js';
 import { checkToken, getRugScoreBonus } from './rugcheck.js';
 import { standardBundleCheck } from './bundle-detector.js';
@@ -94,6 +94,14 @@ export async function runScreening(tokenData) {
     return makeDecision('SKIP', 0, [`Too old: ${ageMinutes.toFixed(0)}min > ${sc.maxTokenAgeMinutes}min`], tokenData);
   }
 
+  // ── MCap filter — skip tokens already too big ──
+  const mcapSol = tokenData.marketCapSol || 0;
+  if (sc.maxMcapSol && mcapSol > 0 && mcapSol > sc.maxMcapSol) {
+    const mcapUsd = mcapSol * 150;
+    const maxUsd = sc.maxMcapSol * 150;
+    return makeDecision('SKIP', 0, [`MCap too high: $${(mcapUsd/1000).toFixed(0)}K > $${(maxUsd/1000).toFixed(0)}K max`], tokenData);
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // STEP 1b: RugCheck.xyz — Token Safety Verification
   // ═══════════════════════════════════════════════════════════════════════════
@@ -156,6 +164,11 @@ export async function runScreening(tokenData) {
   // On-chain RPC fetch is SKIPPED for now due to rate limits on free Helius RPC.
   // The merger score (_mergerScore) already accounts for signal strength.
   const tradeStats = getTradeStats(tokenData.mint, 5 * 60 * 1000);
+
+  // ── HARD SKIP: Dead token — 0 activity after delay ──
+  if (tradeStats && tradeStats.buyCount === 0 && tradeStats.totalBuySol === 0) {
+    return makeDecision('SKIP', 0, [`Dead token: 0 buys, 0 volume after delay`], tokenData);
+  }
 
   if (tradeStats) {
     // Buy count check
@@ -388,10 +401,10 @@ async function analyzeHolders(mint) {
     // Get token largest accounts
     const connection = getConnection();
     const mintPubkey = await import('@solana/web3.js').then(m => new m.PublicKey(mint));
-    const accounts = await queuedRpc(() =>
+    const accounts = await smartRpc(() => queuedRpc(() =>
       connection.getTokenLargestAccounts(mintPubkey),
       `holders(${mint.slice(0, 8)})`
-    );
+    ), `holders(${mint.slice(0, 8)})`);
 
     if (!accounts?.value?.length) return null;
 
@@ -440,10 +453,10 @@ async function getBondingCurveProgress(mint, bondingCurveAddress) {
       const { PublicKey } = await import('@solana/web3.js');
       const connection = getConnection();
       const curvePubkey = new PublicKey(bondingCurveAddress);
-      const accountInfo = await queuedRpc(() =>
+      const accountInfo = await smartRpc(() => queuedRpc(() =>
         connection.getAccountInfo(curvePubkey),
         `bonding(${mint.slice(0, 8)})`
-      );
+      ), `bonding(${mint.slice(0, 8)})`);
 
       if (accountInfo?.data) {
         const data = Buffer.from(accountInfo.data);
@@ -491,10 +504,10 @@ async function checkDeployerHistory(deployer) {
     const { PublicKey } = await import('@solana/web3.js');
     const deployerPubkey = new PublicKey(deployer);
 
-    const sigs = await queuedRpc(() =>
+    const sigs = await smartRpc(() => queuedRpc(() =>
       connection.getSignaturesForAddress(deployerPubkey, { limit: 20 }),
       `deployer(${deployer.slice(0, 8)})`
-    );
+    ), `deployer(${deployer.slice(0, 8)})`);
 
     const result = (sigs && sigs.length > 10)
       ? { isRisky: false, hasHistory: true }

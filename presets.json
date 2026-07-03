@@ -10,7 +10,7 @@
     },
     "entry": { "buyAmountSol": 0.05, "slippageBps": 800 },
     "exit": { "stopLossPct": -15, "trailingStopPct": 15, "maxHoldTimeMinutes": 30 },
-    "risk": { "maxOpenPositions": 3, "maxDailyTrades": 10 }
+    "risk": { "maxOpenPositions": 3, "maxDailyTrades": 50 }
   },
   "degen": {
     "label": "⚡ Degen Mode",
@@ -23,7 +23,7 @@
     },
     "entry": { "buyAmountSol": 0.2, "slippageBps": 2500 },
     "exit": { "stopLossPct": -40, "trailingStopPct": 30, "maxHoldTimeMinutes": 5 },
-    "risk": { "maxOpenPositions": 20, "maxDailyTrades": 200 }
+    "risk": { "maxOpenPositions": 20, "maxDailyTrades": 80 }
   },
   "ape": {
     "label": "🦍 Ape Mode",
@@ -36,6 +36,6 @@
     },
     "entry": { "buyAmountSol": 0.5, "slippageBps": 3500 },
     "exit": { "stopLossPct": -60, "trailingStopPct": 40, "maxHoldTimeMinutes": 2 },
-    "risk": { "maxOpenPositions": 50, "maxDailyTrades": 500 }
+    "risk": { "maxOpenPositions": 50, "maxDailyTrades": 100 }
   }
 }

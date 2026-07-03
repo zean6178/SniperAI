@@ -47,6 +47,8 @@ import { initTelegram, sendTelegram, isPaused, setPaused, isSilent, setSilent } 
 import { sendInlineKeyboard, startCallbackPoller, stopCallbackPoller, editKeyboard, answerCallback, onCommand, sendMessageToChat, sendSound } from './telegram.js';
 import { buildSnipeResultKeyboard } from './telegram-ui.js';
 import { formatMcapUsd } from './telegram-ui.js';
+import { buildDashboardText, buildHistoryText, buildStatsText, buildDailyRecapText } from './telegram-ui.js';
+import { initApiServer, broadcastSnipeAlert, broadcastTrade, broadcastPositionUpdate, stopApiServer } from './api-server.js';
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STARTUP
@@ -85,6 +87,24 @@ async function main() {
 
   // Init Telegram
   await initTelegram();
+
+  // Init API Server untuk Android App
+  const { getOpenPositions, getOpenPositionCount, getDailyStats, getTradeHistory, getWinRate } = await import('./state.js');
+  const { sellToken, getTokenPrice } = await import('./executor.js');
+  initApiServer({
+    getConfig,
+    getBalance,
+    getOpenPositions,
+    getOpenPositionCount,
+    getDailyStats,
+    getTradeHistory,
+    getWinRate,
+    isPaused,
+    setPaused,
+    sellToken,
+    getTokenPrice,
+    formatMcapUsd,
+  });
 
   // Register command handlers
   onCommand('start', async (chatId) => {
@@ -173,6 +193,7 @@ async function main() {
     stopMonitor();
     stopCallbackPoller();
     stopServerClient();
+    stopApiServer();
     cleanupLocks();
 
     // Set paused flag so PM2 autorestart brings it back in idle state
@@ -196,6 +217,7 @@ async function main() {
     stopMonitor();
     stopCallbackPoller();
     stopServerClient();
+    stopApiServer();
     cleanupLocks();
 
     // Graceful exit — PM2 autorestart handles the restart cleanly
@@ -212,22 +234,58 @@ async function main() {
 onCommand('help', async (chatId) => {
     await sendMessageToChat(chatId,
       `🤖 *SniperAI Bot*\n\n` +
-      `Available commands:\n` +
-      `/start — Bot info & status\n` +
-      `/status — Wallet & position summary\n` +
-      `/balance — Wallet balance\n` +
-      `/pause — ⏸️ Pause screening & snipe\n` +
-      `/resume — ▶️ Resume screening & snipe\n` +
-      `/silent — 🔇 Suppress notifications (pipeline tetap jalan)\n` +
-      `/speak — 🔊 Resume notifications\n` +
-      `/preset safe|degen|ape — 🎛️ Load preset profile\n` +
-      `/reload — 🔄 Reload config (apply code changes without restart)\n` +
-      `/stop — 🛑 Stop bot entirely\n` +
-      `/restart — 🔄 Restart bot via PM2\n` +
-      `/sync — 🔄 Sync on-chain positions (kalo lo jual manual)\n` +
-      `/help — This message\n\n` +
+            `*Commands:*\n` +
+            `📊 /dashboard — Full overview\n` +
+            `📋 /status — Quick status\n` +
+            `💰 /balance — Wallet balance\n` +
+            `📂 /positions — Open positions\n` +
+            `📜 /history — Trade history\n` +
+            `📈 /stats — Performance analytics\n` +
+            `📅 /daily — Daily recap\n` +
+            `⏸️ /pause — Pause snipe\n` +
+            `▶️ /resume — Resume snipe\n` +
+            `🔇 /silent — Mute notifications\n` +
+            `🔊 /speak — Unmute\n` +
+            `🎛️ /preset — Load profile\n` +
+            `🔄 /reload — Reload config\n` +
+            `🔴 /closeall — Close all\n` +
+            `🔄 /sync — Reconcile\n` +
+            `🛑 /stop — Stop bot\n` +
+            `🔄 /restart — Restart\n\n` +
       `_When a token passes screening, an inline alert appears with buy buttons._`
     );
+  });
+
+  onCommand('dashboard', async (chatId) => {
+    const bal = await getBalance().catch(() => ({ solBalance: 0 }));
+    const { getOpenPositions, getDailyStats } = await import('./state.js');
+    const stats = getDailyStats();
+    const positions = getOpenPositions();
+    const text = buildDashboardText(stats, config, positions, bal);
+    await sendMessageToChat(chatId, text);
+  });
+
+  onCommand('history', async (chatId) => {
+    const { getTradeHistory } = await import('./state.js');
+    const trades = getTradeHistory(50);
+    const text = buildHistoryText(trades);
+    await sendMessageToChat(chatId, text);
+  });
+
+  onCommand('stats', async (chatId) => {
+    const { getDailyStats, getTradeHistory } = await import('./state.js');
+    const stats = getDailyStats();
+    const trades = getTradeHistory(200);
+    const text = buildStatsText(stats, trades, config);
+    await sendMessageToChat(chatId, text);
+  });
+
+  onCommand('daily', async (chatId) => {
+    const { getDailyStats, getTradeHistory } = await import('./state.js');
+    const stats = getDailyStats();
+    const trades = getTradeHistory(200);
+    const text = buildDailyRecapText(stats, trades, config);
+    await sendMessageToChat(chatId, text);
   });
 
   onCommand('preset', async (chatId, args) => {
@@ -400,6 +458,9 @@ async function handleNewToken(tokenData) {
     // Decision = SNIPE!
     console.log(chalk.green(`\n[main] 🎯 SNIPE SIGNAL: ${tokenData.symbol} | Score: ${screenResult.score}/100`));
 
+    // 📡 Push to Android app via WebSocket
+    broadcastSnipeAlert(tokenData, screenResult);
+
     // ═════════════════════════════════════════════════════════════════════════
     // STEP 2: RISK CHECK — Can we trade?
     // ═════════════════════════════════════════════════════════════════════════
@@ -501,6 +562,18 @@ async function handleNewToken(tokenData) {
       );
 
       console.log(chalk.green(`[main] ✅ Position opened: ${tokenData.symbol} | ${buyAmountSol} SOL`));
+
+      // 📡 Push trade to Android app
+      broadcastTrade('buy', {
+        mint: tokenData.mint,
+        symbol: tokenData.symbol,
+        amountSol: buyAmountSol,
+        score: screenResult.score,
+        mcapSol: tokenData.marketCapSol,
+        mcapUsd: formatMcapUsd(tokenData.marketCapSol),
+        txHash: buyResult.txHash,
+        isDryRun: config.isDryRun,
+      });
     } else {
       console.error(chalk.red(`[main] ❌ Buy failed: ${buyResult.error}`));
       await sendTelegram(`❌ *Buy Failed*\nToken: ${tokenData.symbol}\nError: ${buyResult.error}`);
@@ -526,6 +599,7 @@ process.on('SIGINT', async () => {
   stopMonitor();
   stopCallbackPoller();
   stopServerClient();
+  stopApiServer();
   cleanupLocks();
   await sendTelegram('🛑 *Sniper bot stopped*');
   process.exit(0);

@@ -26,6 +26,7 @@ const DEFAULT_STATE = {
   positions: {},          // tokenMint → position data
   closedToday: [],        // closed positions hari ini
   tradeHistory: [],       // all-time trade log (last 500)
+  totalTradesCount: 0,    // all-time trade counter (never trimmed)
   dailyStats: {
     date: null,
     tradesCount: 0,
@@ -68,6 +69,10 @@ function loadState() {
     }
     const defaults = deepCloneDefault();
     _cachedState = { ...defaults, ...raw };
+    // Migrasi: kalau totalTradesCount belum ada, init dari tradeHistory.length
+    if (_cachedState.totalTradesCount === undefined || _cachedState.totalTradesCount === 0) {
+      _cachedState.totalTradesCount = raw.tradeHistory?.length || 0;
+    }
     _lastLoad = now;
     return _cachedState;
   } catch {
@@ -152,6 +157,9 @@ export function closePosition(tokenMint, closeData = {}) {
     state.tradeHistory = state.tradeHistory.slice(-500);
   }
 
+  // Increment all-time counter (never trimmed)
+  state.totalTradesCount = (state.totalTradesCount || 0) + 1;
+
   // Remove from open
   delete state.positions[tokenMint];
 
@@ -230,5 +238,20 @@ export function getFullState() {
 }
 
 export function getClosedCount() {
-  return loadState().tradeHistory.length;
+  return loadState().totalTradesCount || 0;
+}
+
+/**
+ * Reset daily trades count to 0 — called when maxDailyTrades terpenuhi
+ * biar bisa lanjut snipe tanpa restart bot.
+ */
+export function resetDailyTradesCount() {
+  const state = loadState();
+  state.dailyStats.tradesCount = 0;
+  state.dailyStats.wins = 0;
+  state.dailyStats.losses = 0;
+  state.dailyStats.totalPnlSol = 0;
+  state.closedToday = [];
+  saveState(state, true);
+  console.log('[state] 🔄 Daily trades count reset to 0 — snipe lanjut!');
 }

@@ -13,7 +13,7 @@
 
 import chalk from 'chalk';
 import { getConfig } from './config.js';
-import { getDailyStats, getOpenPositionCount } from './state.js';
+import { getDailyStats, getOpenPositionCount, resetDailyTradesCount } from './state.js';
 import { getBalance } from './executor.js';
 
 // Track last loss time (for cooldown)
@@ -137,10 +137,13 @@ export async function preTradeRiskCheck() {
     reasons.push(`❌ Daily loss limit hit: ${stats.totalPnlSol.toFixed(4)} SOL (max: -${risk.maxDailyLossSol})`);
   }
 
-  // 3. Max daily trades
+  // 3. Max daily trades — auto-reset ke 0 biar bisa snipe terus
   if (stats.tradesCount >= risk.maxDailyTrades) {
-    canTrade = false;
-    reasons.push(`❌ Max daily trades reached: ${stats.tradesCount}/${risk.maxDailyTrades}`);
+    console.log(chalk.yellow(`[risk] 🔄 Max daily trades reached (${stats.tradesCount}/${risk.maxDailyTrades}) — auto-reset ke 0 biar lanjut snipe`));
+    resetDailyTradesCount();
+    // Re-fetch stats setelah reset
+    const freshStats = getDailyStats();
+    console.log(chalk.green(`[risk] ✅ Trades count reset → ${freshStats.tradesCount}, lanjut snipe!`));
   }
 
   // 4. Gas reserve check (skip in dry-run mode)
@@ -240,14 +243,35 @@ export function checkExitConditions(position, currentPriceSol) {
   const currentMultiple = currentPriceSol / entryPrice;
   const soldPct = position.soldPct || 0;
 
-  // ── Stop Loss (selalu aktif) ──────────────────────────────────────────
-  if (priceChange <= exit.stopLossPct) {
+  // ── Stop Loss (selalu aktif) — mode-specific > global ────────────────
+  const modeSlPct = position.tradeMode
+    ? config.screening?.tradeModes?.[position.tradeMode]?.stopLossPct
+    : null;
+  const activeSlPct = modeSlPct ?? exit.stopLossPct;
+  if (priceChange <= activeSlPct) {
     return {
       shouldExit: true,
-      reason: `🛑 STOP LOSS: ${priceChange.toFixed(1)}% (threshold: ${exit.stopLossPct}%)`,
+      reason: `🛑 STOP LOSS: ${priceChange.toFixed(1)}% (threshold: ${activeSlPct}%)`,
       sellPct: 100,
       type: 'stop_loss',
     };
+  }
+
+  // ── Trailing Stop Loss ────────────────────────────────────────
+  const activeTrailPct = position.tradeMode
+    ? (config.screening?.tradeModes?.[position.tradeMode]?.trailingStopPct ?? 0)
+    : (exit.trailingStopPct || 0);
+
+  if (activeTrailPct > 0 && position.peakPriceSol > 0 && position.peakPriceSol > entryPrice) {
+    const drawdownFromPeak = ((currentPriceSol - position.peakPriceSol) / position.peakPriceSol) * 100;
+    if (drawdownFromPeak <= -activeTrailPct) {
+      return {
+        shouldExit: true,
+        reason: `📉 TRAILING STOP: ${drawdownFromPeak.toFixed(1)}% from peak ${position.peakPriceSol.toFixed(8)} SOL (threshold: -${activeTrailPct}%)`,
+        sellPct: 100,
+        type: 'trailing_stop',
+      };
+    }
   }
 
   // ── Take Profit Levels ────────────────────────────────────────────────

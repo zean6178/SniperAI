@@ -40,14 +40,20 @@ function buildConfig() {
       chatId:   process.env.TELEGRAM_CHAT_ID || '',
     },
 
+    // ─── API Server (Android App) ──────────────────────────────────────────────
+    api: {
+      port:   parseInt(process.env.API_PORT) || 3000,
+      apiKey: process.env.API_KEY || '',
+    },
+
     // ═══════════════════════════════════════════════════════════════════════════
     // SCREENING FILTERS
     // ═══════════════════════════════════════════════════════════════════════════
     screening: {
       // ── Hard filters (instant SKIP jika tidak lolos) ──
-      maxDevHoldingPct:    20,
-      maxTopHolderPct:     30,
-      maxTop10HolderPct:   60,
+      maxDevHoldingPct:    5,
+      maxTopHolderPct:     3,
+      maxTop10HolderPct:   15,
       minHolders:          5,
       blockBundledLaunch:  true,
       maxBundleWallets:    5,
@@ -59,8 +65,9 @@ function buildConfig() {
       minBuyCount5m:       3,
       minVolume5mSol:      0.2,
       requireSocial:       true,
-      maxTokenAgeMinutes:  3,       // Turun drastis: 15m → 2 menit
+      maxTokenAgeMinutes:  3,       // Max 3 menit
       minTokenAgeSeconds:  5,       // 5 detik — delay 8-12s jadi natural buffer
+      maxMcapSol:          3333,    // ~$500K @ $150/SOL — skip token udah besar
       snipeThreshold:      70,
       watchThreshold:      50,
 
@@ -70,14 +77,17 @@ function buildConfig() {
           enabled:          true,
           label:            '⚡ Early Snipe',
           description:      '0-2 menit setelah launch',
-          entryDelayMs:     [10_000, 30_000],  // Detik 10-30
+          entryDelayMs:     [10_000, 30_000],
           tokenAgeMaxSec:   120,
           sizeSol:          0.05,
-          targetMultiple:   3.0,   // 3x
-          stopLossPct:      -30,
-          maxHoldSeconds:   90,    // 90 detik force exit kalo flat
-          bondingCurveRange: [1, 25],  // curve 1-25%
-          requiresVolume:   false,
+          targetMultiple:   2.0,   // 2x
+          stopLossPct:      -20,
+          trailingStopPct:  10,    // trailing 10%
+          maxHoldSeconds:   240,   // 4 menit
+          bondingCurveRange: [5, 20],
+          requiresVolume:   true,
+          minVolumeSol:     3,
+          minBuyCount:      10,
         },
         momentum_ride: {
           enabled:          true,
@@ -144,7 +154,7 @@ function buildConfig() {
     // ENTRY STRATEGY
     // ═══════════════════════════════════════════════════════════════════════════
     entry: {
-      buyAmountSol:        1.0,      // Base size — terendah (early snipe)
+      buyAmountSol:        0.05,     // Base size — terendah (early snipe)
       maxBuyAmountSol:     1.0,      // Max size — curve play
       slippageBps:         1200,      // 15% — ikut dokumen
       priorityFeeLamports: 500000,
@@ -180,6 +190,13 @@ takeProfitLevels: [
         minTrades:    3,           // ≥3 trades dalam window → bonding curve ON
         windowSec:    30,          // window deteksi dalam detik
       },
+
+      // ── Volume Decay Exit — close if volume drops significantly ──
+      volumeDecayThresholdPct: 80,    // Exit jika volume < 20% dari entry volume
+
+      // ── Auto Sweep — swap remaining dust back to SOL after close ──
+      autoSweep:        true,
+      minSweepValueUsd: 0.50,         // Skip sweep kalau sisa < $0.50
     },
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -189,7 +206,7 @@ takeProfitLevels: [
       maxOpenPositions:     100,      // 100 — dry run mode
       maxDailyLossSol:      0.6,      // -30% dari 2 SOL modal
       dailyLossHardStopPct: 30,       // -30% modal hari ini → stop all
-      maxDailyTrades:       500,      // Ample untuk dry run
+      maxDailyTrades:       300,      // Increased from 100
       gasReserveSol:        0.05,
       cooldownAfterLossSec: 180,
       zeroBalanceCooldownSec: 715300,
