@@ -172,6 +172,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [authToken, account]);
 
   // ─── Sign Transaction (does NOT send) ──────────────────────────────────────
+  // v2.2.9 API: signTransactions accepts Transaction | VersionedTransaction directly,
+  // library handles serialization internally. Returns the same type.
   const signTransaction = useCallback(async (
     transaction: Transaction | VersionedTransaction
   ): Promise<Transaction | VersionedTransaction> => {
@@ -184,50 +186,38 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         auth_token: authToken,
       });
 
-      // Serialize the transaction
-      const serialized = 'version' in transaction
-        ? transaction.serialize()
-        : transaction.serialize({ requireAllSignatures: false });
-
       const signedTxs = await wallet.signTransactions({
-        transactions: [serialized],
+        transactions: [transaction],
       });
 
       return signedTxs[0];
     });
 
-    // Deserialize back
-    if ('version' in transaction) {
-      return VersionedTransaction.deserialize(result);
-    } else {
-      return Transaction.from(result);
-    }
+    return result;
   }, [authToken]);
 
   // ─── Sign and Send Transaction ──────────────────────────────────────────────
+  // v2.2.9 API: signAndSendTransactions accepts Transaction | VersionedTransaction directly,
+  // returns TransactionSignature[] (base58 strings).
   const signAndSendTransaction = useCallback(async (
     transaction: Transaction | VersionedTransaction
   ): Promise<string> => {
     if (!authToken) throw new Error('Wallet not connected');
 
-    const txHash = await transact(async (wallet) => {
+    const signatures = await transact(async (wallet) => {
       await wallet.authorize({
         chain: `solana:${CLUSTER}`,
         identity: APP_IDENTITY,
         auth_token: authToken,
       });
 
-      const serialized = 'version' in transaction
-        ? transaction.serialize()
-        : transaction.serialize({ requireAllSignatures: false });
-
       // sign_and_send_transactions — wallet signs AND submits to network
-      const signatures = await wallet.signAndSendTransactions({
-        transactions: [serialized],
+      return await wallet.signAndSendTransactions({
+        transactions: [transaction],
       });
-
-      return bs58.encode(signatures[0]);
     });
+
+    const txHash = signatures[0];
 
     // Wait for confirmation
     await connection.confirmTransaction(txHash, 'confirmed');
@@ -248,21 +238,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         auth_token: authToken,
       });
 
-      const serializedTxs = transactions.map(tx =>
-        'version' in tx ? tx.serialize() : tx.serialize({ requireAllSignatures: false })
-      );
-
-      return await wallet.signTransactions({ transactions: serializedTxs });
+      return await wallet.signTransactions({ transactions });
     });
 
-    // Deserialize all back
-    return results.map((result, i) => {
-      const original = transactions[i];
-      if ('version' in original) {
-        return VersionedTransaction.deserialize(result);
-      }
-      return Transaction.from(result);
-    });
+    return results;
   }, [authToken]);
 
   // ─── Context value ──────────────────────────────────────────────────────────

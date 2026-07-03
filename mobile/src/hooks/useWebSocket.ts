@@ -33,8 +33,8 @@ export function useWebSocket(options: WebSocketOptions = {}) {
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const handlers = useRef<Map<string, Set<MessageHandler>>>(new Map());
   const messageQueue = useRef<string[]>([]);
-  const pingTimer = useRef<NodeJS.Timeout | null>(null);
-  const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
+  const pingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Flush queued messages
   const flushQueue = useCallback(() => {

@@ -92,6 +92,36 @@ export const colors = {
 
   white: '#FFFFFF',
   black: '#000000',
+
+  // === LEGACY ALIASES (backward compat — screens use these) ===
+  bg: {
+    primary: '#0A1120',
+    secondary: '#111827',
+    tertiary: '#1A2235',
+    hover: 'rgba(255, 255, 255, 0.05)',
+    glass: 'rgba(255, 255, 255, 0.03)',
+  },
+  cyan: {
+    400: '#00E5FF',
+    50: '#E0FBFF',
+    gradient: ['#0066FF', '#00E5FF'] as readonly string[],
+    glow: 'rgba(0, 229, 255, 0.3)',
+  },
+  blue: {
+    400: '#0066FF',
+  },
+  text: {
+    primary: '#FFFFFF',
+    secondary: 'rgba(255, 255, 255, 0.6)',
+    tertiary: 'rgba(255, 255, 255, 0.35)',
+    disabled: 'rgba(255, 255, 255, 0.2)',
+    cyan: '#00E5FF',
+  },
+  border: {
+    subtle: 'rgba(0, 229, 255, 0.06)',
+    default: 'rgba(0, 229, 255, 0.1)',
+    strong: 'rgba(0, 229, 255, 0.2)',
+  },
 };
 
 
@@ -370,10 +400,27 @@ export const legacyColors = {
 };
 
 // Merge legacy into main colors export for backward compat
-Object.assign(colors, {
+// Must be declared with explicit type to satisfy TypeScript
+const _colorsWithLegacy = colors as typeof colors & {
+  bg: typeof legacyColors.bg;
+  cyan: typeof legacyColors.cyan;
+  blue: typeof legacyColors.blue;
+  text: typeof legacyColors.text;
+  border: typeof legacyColors.border;
+};
+Object.assign(_colorsWithLegacy, {
   bg: legacyColors.bg,
   cyan: legacyColors.cyan,
   blue: legacyColors.blue,
   text: legacyColors.text,
   border: legacyColors.border,
 });
+// Re-export with legacy aliases
+export const colorsWithLegacy = _colorsWithLegacy;
+
+// Also add legacy props to colors for import compatibility
+(colors as any).bg = legacyColors.bg;
+(colors as any).cyan = legacyColors.cyan;
+(colors as any).blue = legacyColors.blue;
+(colors as any).text = legacyColors.text;
+(colors as any).border = legacyColors.border;

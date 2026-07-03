@@ -24,8 +24,8 @@ export function useTokenFeed(options: TokenFeedOptions = {}) {
   const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimer = useRef<NodeJS.Timeout | null>(null);
-  const pollTimer = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Remove stale tokens and sort by score
   const processTokens = useCallback((tokenList: any[]) => {

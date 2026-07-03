@@ -15,6 +15,12 @@
       },
       "package": "com.sniperai.app"
     },
-    "plugins": []
+    "plugins": [],
+    "extra": {
+      "eas": {
+        "projectId": "78865223-d67b-4e04-9aea-d2a85e0fca94"
+      }
+    },
+    "owner": "zeandrn"
   }
 }

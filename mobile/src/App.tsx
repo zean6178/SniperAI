@@ -77,7 +77,7 @@ function HomeTabs() {
           return <TabIcon name={route.name} focused={focused} />;
         },
         tabBarButton: route.name === 'Snipe'
-          ? (props) => <CenterButton onPress={props.onPress || (() => {})} />
+          ? (props: any) => <CenterButton onPress={() => (props as any).onPress?.()} />
           : undefined,
       })}
     >
@@ -117,7 +117,7 @@ function HomeTabs() {
 export default function App() {
   return (
     <WalletProvider>
-      <NavigationContainer theme={navigationTheme}>
+      <NavigationContainer theme={navigationTheme as any}>
         <StatusBar style="light" />
         <Stack.Navigator screenOptions={stackTheme}>
           <Stack.Screen

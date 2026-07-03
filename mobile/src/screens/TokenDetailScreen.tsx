@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: spacing.md,
-    ...shadows.cyan,
+    ...shadows.cyanGlow,
   },
   avatarText: {
     ...typography.h2,
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: colors.cyan[400],
     marginRight: spacing.sm,
-    ...shadows.cyan,
+    ...shadows.cyanGlow,
   },
   cardTitle: {
     ...typography.label,

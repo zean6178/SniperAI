@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
   bubbleUser: {
     backgroundColor: colors.blue[400],
     borderBottomRightRadius: radius.xs,
-    ...shadows.neonBlue,
+    ...shadows.blueGlow,
   },
   bubbleAI: {
     ...glass.card,
@@ -321,7 +321,7 @@ const styles = StyleSheet.create({
     borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.cyan,
+    ...shadows.cyanGlow,
   },
   sendBtnDisabled: {
     backgroundColor: colors.bg.tertiary,
