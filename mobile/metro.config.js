@@ -18,7 +18,6 @@ config.resolver.extraNodeModules = {
   https: require.resolve('https-browserify'),
   url: require.resolve('url'),
   assert: require.resolve('assert'),
-  fs: require.resolve('react-native-fs'),
   util: require.resolve('util'),
 };
 
