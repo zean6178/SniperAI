@@ -302,6 +302,12 @@ export const navigationTheme = {
     border: colors.borderDark.subtle,
     notification: colors.primary.blue,
   },
+  fonts: {
+    regular: { fontFamily: 'sans-serif', fontWeight: 'normal' as const },
+    medium: { fontFamily: 'sans-serif-medium', fontWeight: 'normal' as const },
+    bold: { fontFamily: 'sans-serif', fontWeight: '600' as const },
+    heavy: { fontFamily: 'sans-serif', fontWeight: '700' as const },
+  },
 };
 
 export const tabBarTheme = {
