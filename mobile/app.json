@@ -6,16 +6,21 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "backgroundColor": "#0D0D0D"
-    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#0D0D0D"
       },
       "package": "com.sniperai.app"
     },
-    "plugins": [],
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0D0D0D",
+          "enableFullScreenImage_legacy": false
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "78865223-d67b-4e04-9aea-d2a85e0fca94"

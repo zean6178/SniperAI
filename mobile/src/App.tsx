@@ -7,6 +7,7 @@
  * Sci-fi premium fintech aesthetic.
  */
 
+import './polyfills'; // MUST be first — Solana web3.js v1 Node.js polyfills
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
