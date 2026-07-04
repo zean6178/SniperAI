@@ -16,6 +16,11 @@ if (typeof global.EventEmitter === 'undefined') {
   global.EventEmitter = EventEmitter;
 }
 
+// Polyfill process (React Native doesn't have it)
+if (typeof global.process === 'undefined') {
+  global.process = { env: { NODE_ENV: 'production' }, nextTick: null };
+}
+
 // Polyfill process.nextTick (used by stream/events)
 if (typeof process.nextTick !== 'function') {
   process.nextTick = (fn, ...args) => {
